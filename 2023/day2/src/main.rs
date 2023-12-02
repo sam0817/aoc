@@ -6,12 +6,14 @@ fn main() {
 
     // part 1
     let result: i32 = contents.lines().map(|line| {
+        0
     }).sum();
 
     println!("Result: {}", result);
 
     // part 2
     let result: i32 = contents.lines().map(|line| {
+        0
     }).sum();
 
     println!("Result: {}", result);
