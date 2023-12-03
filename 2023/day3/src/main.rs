@@ -25,34 +25,54 @@ fn main() {
 }
 
 fn part1(contents: &str) {
-    let (symbols,numbers) = part1_symbols(contents);
+    let mut sum = 0;
+    let (symbol, numbers) = part1_symbols(contents);
+    println!("{:?}",symbol);
+    numbers.iter().for_each(|num| {
+        for position in (num.start - 1)..=(num.end + 1) {
+            if symbol.contains_key(&(num.line_no - 1, position))
+                || symbol.contains_key(&(num.line_no + 1, position)) {
+                println!("{} {} {} {}", num.num, num.line_no, num.start, num.end);
+                sum += num.num;
+                break;
+            }
+        }
+
+        if symbol.contains_key(&(num.line_no, num.start - 1))
+            || symbol.contains_key(&(num.line_no, num.end + 1)) {
+            println!(">{} {} {} {}", num.num, num.line_no, num.start, num.end);
+            sum += num.num;
+        }
+    });
+    println!("Result: {}", sum);
 }
+
 struct Num {
     num: i32,
-    line: i32,
+    line_no: i32,
     start: i32,
     end: i32,
 }
 
-fn part1_symbols(contents: &str) -> (HashMap<(i32, i32), char> ,Vec<Num>) {
+fn part1_symbols(contents: &str) -> (HashMap<(i32, i32), char>, Vec<Num>) {
     let mut symbol = HashMap::<(i32, i32), char>::new();
     let mut numbers = Vec::<Num>::new();
-    let mut x: i32 = 0;
+    let mut line_no: i32 = 0;
     for line in contents.lines() {
-        x += 1;
-        let mut y = 0;
+        line_no += 1;
+        let mut position = 0;
         let mut start = 0;
         let mut end = 0;
         let mut num_stack = String::new();
         for c in line.chars() {
-            y += 1;
+            position += 1;
             match c {
                 '.' => {
                     if num_stack.len() > 0 {
                         let num = num_stack.parse::<i32>().unwrap();
                         numbers.push(Num {
                             num,
-                            line: x,
+                            line_no,
                             start,
                             end,
                         });
@@ -61,25 +81,34 @@ fn part1_symbols(contents: &str) -> (HashMap<(i32, i32), char> ,Vec<Num>) {
                 }
                 '0'..='9' => {
                     if num_stack.len() == 0 {
-                      start = y;
+                        start = position;
                     }
                     num_stack.push(c);
-                    end = y;
+                    end = position;
                 }
                 _ => {
                     if num_stack.len() > 0 {
                         let num = num_stack.parse::<i32>().unwrap();
                         numbers.push(Num {
                             num,
-                            line: x,
+                            line_no,
                             start,
                             end,
                         });
                     }
                     num_stack.clear();
-                    symbol.insert((x, y), c);
+                    symbol.insert((line_no, position), c);
                 }
             }
+        }
+        if num_stack.len() > 0 {
+            let num = num_stack.parse::<i32>().unwrap();
+            numbers.push(Num {
+                num,
+                line_no,
+                start,
+                end,
+            });
         }
     }
     // for num in numbers {
