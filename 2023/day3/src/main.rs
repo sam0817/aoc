@@ -6,33 +6,18 @@ fn main() {
 
     // part 1
     part1(&contents[..]);
-    // let result: i32 = contents.lines().map(|line| {
-    //     part1(line)
-    // }).sum();
-
-    // println!("Result: {:?}", symbols);
 
     // part 2
-    let result: i32 = contents
-        .lines()
-        .map(|line| {
-            // part2_sum_bags(line)
-            1
-        })
-        .sum();
-
-    println!("Result: {}", result);
+    part2(&contents[..]);
 }
 
 fn part1(contents: &str) {
     let mut sum = 0;
     let (symbol, numbers) = part1_symbols(contents);
-    println!("{:?}",symbol);
     numbers.iter().for_each(|num| {
         for position in (num.start - 1)..=(num.end + 1) {
             if symbol.contains_key(&(num.line_no - 1, position))
                 || symbol.contains_key(&(num.line_no + 1, position)) {
-                println!("{} {} {} {}", num.num, num.line_no, num.start, num.end);
                 sum += num.num;
                 break;
             }
@@ -40,7 +25,6 @@ fn part1(contents: &str) {
 
         if symbol.contains_key(&(num.line_no, num.start - 1))
             || symbol.contains_key(&(num.line_no, num.end + 1)) {
-            println!(">{} {} {} {}", num.num, num.line_no, num.start, num.end);
             sum += num.num;
         }
     });
@@ -111,8 +95,38 @@ fn part1_symbols(contents: &str) -> (HashMap<(i32, i32), char>, Vec<Num>) {
             });
         }
     }
-    // for num in numbers {
-    //     println!("{} {} {} {}", num.num, num.line, num.start, num.end);
-    // }
     (symbol, numbers)
+}
+
+fn part2(contents: &str) {
+    let mut statistics = HashMap::<(i32, i32, char), Vec<i32>>::new();
+    let (symbols, numbers) = part1_symbols(contents);
+    numbers.iter().for_each(|num| {
+        for position in (num.start - 1)..=(num.end + 1) {
+            if symbols.contains_key(&(num.line_no - 1, position)) {
+                let symbol = symbols.get(&(num.line_no - 1, position)).unwrap_or(&' ');
+                statistics.entry((num.line_no - 1, position, *symbol)).or_insert(vec![]).push(num.num);
+            }
+            if symbols.contains_key(&(num.line_no + 1, position)) {
+                let symbol = symbols.get(&(num.line_no + 1, position)).unwrap_or(&' ');
+                statistics.entry((num.line_no + 1, position, *symbol)).or_insert(vec![]).push(num.num);
+            }
+        }
+
+        if symbols.contains_key(&(num.line_no, num.start - 1)) {
+            let symbol = symbols.get(&(num.line_no, num.start - 1)).unwrap_or(&' ');
+            statistics.entry((num.line_no, num.start - 1, *symbol)).or_insert(vec![]).push(num.num);
+        }
+        if symbols.contains_key(&(num.line_no, num.end + 1)) {
+            let symbol = symbols.get(&(num.line_no, num.end + 1)).unwrap_or(&' ');
+            statistics.entry((num.line_no, num.end + 1, *symbol)).or_insert(vec![]).push(num.num);
+        }
+    });
+    let mut sum = 0;
+    statistics.iter().for_each(|(key, value)| {
+        if key.2 == '*' && value.len() == 2 {
+            sum += value[0] * value[1];
+        }
+    });
+    println!("Result: {}", sum);
 }
