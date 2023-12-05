@@ -2,8 +2,8 @@ use std::fs;
 use std::collections::HashMap;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     // part 1
@@ -29,6 +29,7 @@ fn part1(content: &str) {
     let mut map_index = -1;
     content.lines().for_each(|line| {
         let mut split = line.split(":").collect::<Vec<&str>>();
+        // println!("{}", rules.iter().count());
         match split[0] {
             "seeds" => {
                 seeds = split[1].trim().split(" ").collect::<Vec<&str>>()
@@ -41,15 +42,15 @@ fn part1(content: &str) {
                     '0'..='9' => {
                         let nums = split[0].trim().split(" ").collect::<Vec<&str>>()
                             .iter().map(|x| x.parse::<isize>().unwrap()).collect::<Vec<isize>>();
-                        // println!("{} nums: {:?}",map_index, nums);
-                        parse_rule(nums.clone()).iter().for_each(|(k, v)| {
-                            // if map_index == 0 { println!("{}: {} -> {}", map_index, k, v) }
-                            // let mut map = rules.entry(map_index).or_insert(HashMap::<isize, isize>::new());
-                            // if map_index == 0 { println!("{} -> {:#?}",map_index, map) }
-                            // map.insert(*k, *v);
-                        });
-                        let mut map = rules2.entry(map_index).or_insert(Vec::<(isize, isize, isize)>::new());
-                        map.push((nums[1], nums[0], nums[2]));
+                        println!("{} nums: {:?}",map_index, nums);
+                        // parse_rule(nums.clone()).iter().for_each(|(k, v)| {
+                        //     // if map_index == 0 { println!("{}: {} -> {}", map_index, k, v) }
+                        //     // let mut map = rules.entry(map_index).or_insert(HashMap::<isize, isize>::new());
+                        //     // if map_index == 0 { println!("{} -> {:#?}",map_index, map) }
+                        //     // map.insert(*k, *v);
+                        // });
+                        // let mut map = rules2.entry(map_index).or_insert(Vec::<(isize, isize, isize)>::new());
+                        // map.push((nums[1], nums[0], nums[2]));
                     }
                     'a'..='z' => { map_index += 1 }
                     &_ => {} }
@@ -57,6 +58,7 @@ fn part1(content: &str) {
         }
     });
 
+    println!("-----------------------");
     let result = seeds.iter().map(|x| {
         let mut seed: isize = x.clone() as isize;
         let len = rules2.len();
@@ -67,6 +69,7 @@ fn part1(content: &str) {
             let rec = v.iter().find(|(source, dest, range)| seed - source >= 0 && seed - source < *range)                ;
             if let Some(rec) = rec {
                 seed = run_map(*rec, seed);
+                println!("{} -> {}", x, seed);
             }
             // if v.contains_key(&(result as isize)) {
             //     result = *v.get(&(result as isize)).unwrap();
@@ -103,3 +106,4 @@ fn parse_rule(tuple: Vec<isize> ) -> Vec<(isize, isize)> {
     }
     result
 }
+// wrong : 22956580
