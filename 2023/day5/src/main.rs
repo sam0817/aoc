@@ -2,8 +2,8 @@ use std::fs;
 use std::collections::HashMap;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     // part 1
@@ -15,6 +15,7 @@ fn main() {
     // println!("Result: {}", result);
 
     // part 2
+    part2(&contents[..]);
     // let result: isize = contents.lines().map(|line| {
     //
     // }).sum();
@@ -108,3 +109,90 @@ fn parse_rule(tuple: Vec<isize> ) -> Vec<(isize, isize)> {
     result
 }
 // wrong : 22956580
+
+fn part2(content: &str) {
+
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Range {
+    pub min: isize,
+    pub max: isize,
+}
+pub struct Data {
+    pub out_of_range: Vec<Range>,
+    pub in_the_range: Vec<Range>,
+}
+
+pub fn map_data(data: Data, source_index: isize, dest_index: isize, length: isize) -> Data {
+    let mut out_of_range = data.out_of_range.to_vec();
+    let mut in_the_range = Vec::<Range>::new();
+    // do split
+    
+    Data { out_of_range, in_the_range }
+}
+
+pub fn map_fn(range: Range, source_index: isize, dest_index: isize, length: isize) -> Range {
+    if range.min >= source_index && range.max <= source_index + length - 1 {
+        let min = dest_index + (range.min - source_index);
+        let max = dest_index + (range.max - source_index);
+        return Range::new(min, max);
+    }
+    if range.max < source_index || range.min > source_index + length - 1 {
+        return range;
+    }
+    panic!("Not implemented")
+}
+
+
+pub fn split_range(from: Range, to: Range) -> Data {
+    // let mut out_of_range = Vec::<Range>::new();
+    // let mut in_the_range = Vec::<Range>::new();
+    if from.max < to.min || from.min > to.max {
+        return Data {
+            out_of_range: vec![from],
+            in_the_range: vec![],
+        };
+    }
+    if from.min >= to.min && from.max <= to.max  {
+        return Data {
+            out_of_range: vec![],
+            in_the_range: vec![from],
+        };
+    }
+    if from.min < to.min && from.max <= to.max {
+        // result.push(Range::new(from.min, to.min - 1));
+        // result.push(Range::new(to.min, from.max));
+        // return result;
+        return Data {
+            out_of_range: vec![Range::new(from.min, to.min - 1)],
+            in_the_range: vec![Range::new(to.min, from.max)],
+        };
+    }
+    if from.min >= to.min && from.max > to.max {
+        return Data {
+            out_of_range: vec![Range::new(to.max + 1, from.max)],
+            in_the_range: vec![Range::new(from.min, to.max)],
+        };
+        // result.push(Range::new(from.min, to.max));
+        // result.push(Range::new(to.max + 1, from.max));
+        // return result;
+    }
+    if from.min < to.min && from.max > to.max {
+        return Data {
+            out_of_range: vec![Range::new(from.min, to.min - 1), Range::new(to.max + 1, from.max)],
+            in_the_range: vec![Range::new(to.min, to.max)],
+        };
+        // result.push(Range::new(from.min, to.min - 1));
+        // result.push(Range::new(to.min, to.max));
+        // result.push(Range::new(to.max + 1, from.max));
+        // return result;
+    }
+    Data { out_of_range: vec![], in_the_range: vec![] }
+}
+
+impl Range {
+    pub fn new(min: isize, max: isize) -> Self {
+        Self { min, max }
+    }
+}
