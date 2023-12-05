@@ -2,8 +2,8 @@ use std::fs;
 use std::collections::HashMap;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     // part 1
@@ -49,8 +49,8 @@ fn part1(content: &str) {
                         //     // if map_index == 0 { println!("{} -> {:#?}",map_index, map) }
                         //     // map.insert(*k, *v);
                         // });
-                        // let mut map = rules2.entry(map_index).or_insert(Vec::<(isize, isize, isize)>::new());
-                        // map.push((nums[1], nums[0], nums[2]));
+                        let mut map = rules2.entry(map_index).or_insert(Vec::<(isize, isize, isize)>::new());
+                        map.push((nums[1], nums[0], nums[2]));
                     }
                     'a'..='z' => { map_index += 1 }
                     &_ => {} }
@@ -67,6 +67,7 @@ fn part1(content: &str) {
             // let v = rules.get(&k).unwrap();
             let v = rules2.get(&k).unwrap();
             let rec = v.iter().find(|(source, dest, range)| seed - source >= 0 && seed - source < *range)                ;
+            println!("{} -> {:#?}", seed, rec);
             if let Some(rec) = rec {
                 seed = run_map(*rec, seed);
                 println!("{} -> {}", x, seed);
