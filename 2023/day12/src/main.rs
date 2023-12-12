@@ -14,8 +14,21 @@ fn main() {
     part2(&contents[..]);
 }
 
-fn part1(content: &str) {
+fn parse_data(content: &str) -> Vec<(String, Vec<i32>)> {
+    content.lines().map(|line| {
+        let mut line = line.split(" ");
+        let data = line.next().unwrap();
+        let data = ".".to_string() + data + ".";
+        let nums = line.next().unwrap();
+        let nums = nums.split(",").collect::<Vec<&str>>().iter().map(|x| x.parse::<i32>().unwrap()).collect::<Vec<i32>>();
+        println!("data: {}, nums: {:?}", data, nums);
+        (data.to_string(), nums)
+    }).collect::<Vec<_>>()
 
+}
+
+fn part1(content: &str) {
+    parse_data(content);
 }
 
 fn part2(content: &str) {
