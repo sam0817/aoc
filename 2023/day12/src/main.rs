@@ -1,8 +1,9 @@
 use std::fs;
+use log::log;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+        // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -14,7 +15,7 @@ fn main() {
     part2(&contents[..]);
 }
 
-fn parse_data(content: &str) -> Vec<(String, Vec<i32>)> {
+fn parse_raw_data_per_line(content: &str) -> Vec<(String, Vec<i32>)> {
     content.lines().map(|line| {
         let mut line = line.split(" ");
         let data = line.next().unwrap();
@@ -25,36 +26,6 @@ fn parse_data(content: &str) -> Vec<(String, Vec<i32>)> {
         (data.to_string(), nums)
     }).collect::<Vec<_>>()
 
-}
-fn handle_cut_data(data: &str, nums: &Vec<i32>)  {
-    let mut mask_count = 0;
-    data.chars().enumerate().for_each(|(i, c)| {
-        if c == '#' {
-            println!("i: {}, c: {}", i, c);
-        }
-    });
-}
-
-fn cut_left(data: &str, nums: &Vec<i32>) -> (String, Vec<i32>) {
-    let mut index = 0;
-    let mut mask_count = 0;
-    let mut interval = 0;
-    let mut mech_count = 0;
-    for (i, c) in data.chars().enumerate() {
-        index = i;
-        if i == 0 { continue; }
-        if c == '.' && interval > 0 { break; }
-        if c == '?' {
-            mask_count += 1;
-            interval += 1;
-        }
-        if c == '#' {
-            interval += 1;
-            mech_count += 1;
-        }
-    }
-    println!("mask_count: {}, interval: {}, mech: {}, idx: {}", mask_count, interval, mech_count, index);
-    (data.to_string(), nums.to_vec())
 }
 
 fn reduce_dot(data: &str) -> String {
@@ -68,72 +39,239 @@ fn reduce_dot(data: &str) -> String {
     result
 }
 
-// ###
-// ?#?
-// ?###? -> 1, 3, 1 => 4 -> (1+1),  5-> 1
-// ????? 1 ->5 , 2-> 4, 3-> 3, 4-> 2, 5-> 1
-fn part_data_handling(data: String, num: i32) -> i32 {
-    if data.len() == num as usize { return 1; }
+fn max_sharp_position(data: &str) -> usize {
+    let mut count = 0;
+    for c in  data.chars().rev() {
+        count+= 1;
+        if c == '#' {
+            break;
+        }
+    }
+    data.len() - count
+}
 
-    if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == num as usize {
-        return 1;
+fn sharp_position(data: &str) -> (usize,usize) {
+    let mut start = -1;
+    let mut end = 0;
+    for (i, c) in data.chars().enumerate() {
+        if end > 0 && c != '#' { break; }
+        if c == '#' {
+            if start == -1 { start = i as i32; }
+            if start != -1 { end = i as i32; }
+            continue;
+        }
+    }
+    (start as usize, end as usize)
+}
+
+fn find_first_range(data: &str, num: usize) -> (usize, usize) {
+    let (start, end) = sharp_position(data);
+    let min =  end as isize + 1  - num as isize;
+    let min = min.max(0) as usize;
+    let max = start + num - 1;
+    let max = max.min(data.len() - 1);
+    (min, max)
+}
+
+/// one string for one number only
+fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
+    if data.len() < num { return None; }
+    if data.len() == num { return Some(1_usize); }
+
+    if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == num {
+        return Some(1_usize);
     }
 
     if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == 0 {
-        return data.len() as i32 + 1 - num;
+        return Some(data.len()  + 1 - num);
     }
 
-    0
+    let iter = data.as_bytes();
+
+    if iter[0] == '#' as u8 || iter[data.len() - 1] == '#' as u8 {
+        return Some(1_usize);
+    }
+
+    let (min, max) = find_first_range(data, num);
+    Some(max - min - num + 2)
+
+    // None
+}
+
+fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
+    if data.len() < nums[0] + nums[1] +1 { return None; }
+    if data.len() == nums[0] + nums[1] +1 { return Some(1); }
+
+    let iter = data.as_bytes();
+    if iter[0] == '#' as u8 {
+        let num = nums[0] + 1; // add split dot
+        let remaining = &data[num..];
+        return parse_single_piece(remaining, nums[1]);
+    }
+
+    if iter[data.len() - 1] == '#' as u8 {
+        let num = nums[1]; // num - 1 + 1
+        let remaining = &data[..data.len() - num - 1];
+        return parse_single_piece(remaining, nums[0]);
+    }
+    // 012345678
+    // ?#??????? , 3 => (0, 3)
+    let mut combinations = 0;
+    let (min, max) = find_first_range(data, nums[0]);
+    for i in min..=(max - nums[0] + 1) {
+        let end = i + nums[0];
+        if iter[end] == '#' as u8 { continue; }
+        let remaining = &data[(end+1)..];
+        let r = parse_single_piece(remaining, nums[1]);
+        if r.is_some() { combinations += r.unwrap(); }
+    }
+
+    let rev = data.chars().rev().collect::<String>();
+    let (min, max) = find_first_range(&rev[..], nums[1]);
+    for i in min..=(max - nums[1] + 1) {
+        let end = i + nums[1];
+        if iter[end] == '#' as u8 { continue; }
+        let remaining = &rev[(end+1)..];
+        let r = parse_single_piece(remaining, nums[0]);
+        if r.is_some() { combinations += r.unwrap(); }
+    }
+
+
+    Some(combinations)
 }
 
 fn part1(content: &str) {
-    let data = parse_data(content);
-    let mut resolved = 0;
+    let data = parse_raw_data_per_line(content);
     data.iter().for_each(|(data, nums)| {
-        // println!("data: {}, nums: {:?}", data, nums);
         let data = reduce_dot(data);
-
-        // perfect split
-        if data.as_bytes().iter().filter(|x| **x == ('.' as u8)).count() == nums.len() + 1 {
-            // println!("data perfect split");
-            let mut split_data = data.split(".").collect::<Vec<&str>>();
-            split_data.remove(0);
-            split_data.remove(split_data.len() - 1);
-            let mut answer: isize = 1;
-            split_data.iter().enumerate().for_each(|(i, x)| {
-                let r = part_data_handling(x.to_string(), nums[i]);
-                // println!("data: {}, -> r: {}", x, r);
-                answer *= r as isize;
-            });
-            resolved += 1;
-            // println!("answer: {}", answer);
-            return;
-        }
-
-        if data.as_bytes().iter().filter(|x| **x == ('.' as u8)).count() == nums.len() {
-            // println!("data: {}, nums: {:?}", data, nums);
-            println!("data split 2 part");
-            let mut split_data = data.split(".").collect::<Vec<&str>>();
-            split_data.remove(0);
-            split_data.remove(split_data.len() - 1);
-            println!("split_data: {:?} vs nums {:?}", split_data, nums);
-        }
+        println!("data: {}, nums: {:?}", data, nums);
     });
-    println!("resolved: {}", resolved);
+}
+
+fn part2(content: &str) {
+    let data = parse_raw_data_per_line(content);
+    data.iter().for_each(|(data, nums)| {
+        let data = reduce_dot(data);
+        // println!("data: {}, nums: {:?}", data, nums);
+    });
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn test_single_piece() {
+        // #號數量 == num
+        assert_eq!(parse_single_piece("###", 3), Some(1));
+        assert_eq!(parse_single_piece("?#?", 3), Some(1));
+        assert_eq!(parse_single_piece("?###?", 3), Some(1));
+        assert_eq!(parse_single_piece("?###", 3), Some(1));
+        assert_eq!(parse_single_piece("???###", 3), Some(1));
+        assert_eq!(parse_single_piece("###????", 3), Some(1));
+        assert_eq!(parse_single_piece("???###???", 3), Some(1));
+        // #號數量 == 0
+        assert_eq!(parse_single_piece("???", 3), Some(1));
+        assert_eq!(parse_single_piece("????", 3), Some(2));
+        assert_eq!(parse_single_piece("?????", 3), Some(3));
+        assert_eq!(parse_single_piece("?????", 2), Some(4));
+        assert_eq!(parse_single_piece("??????", 3), Some(4));
 
-fn part2(content: &str) {
-    let data = parse_data(content);
-    let mut max_diff = 0;
-    data.iter().for_each(|(data, nums)| {
-       let sum = nums.iter().sum::<i32>();
-         let diff = data.len() as i32 - sum - nums.len() as i32 - 1;
-            if diff > max_diff {
-                max_diff = diff;
-            }
-    });
-    println!("max_diff: {}", max_diff);
+        // 長度 == num
+        assert_eq!(parse_single_piece("?#", 2), Some(1)); // 1 1 2 2
+        assert_eq!(parse_single_piece("#?", 2), Some(1)); // 0 0
+
+        // #開頭 或 # 結尾
+        assert_eq!(parse_single_piece("#??", 2), Some(1));
+        assert_eq!(parse_single_piece("??#", 2), Some(1));
+        assert_eq!(parse_single_piece("??##", 3), Some(1));
+        assert_eq!(parse_single_piece("??#?#", 4), Some(1));
+        assert_eq!(parse_single_piece("#????????????", 4), Some(1));
+        assert_eq!(parse_single_piece("????????#?#", 4), Some(1));
+
+        // #號數量 == 1
+        assert_eq!(parse_single_piece("??#", 2), Some(1));
+        assert_eq!(parse_single_piece("???#", 2), Some(1));
+        assert_eq!(parse_single_piece("???#", 3), Some(1));
+        assert_eq!(parse_single_piece("????#", 4), Some(1));
+        assert_eq!(parse_single_piece("#??", 2), Some(1));
+        assert_eq!(parse_single_piece("#???", 2), Some(1));
+        assert_eq!(parse_single_piece("?#?", 2), Some(2));
+        assert_eq!(parse_single_piece("?#??", 2), Some(2));
+        assert_eq!(parse_single_piece("?#??", 2), Some(2));
+        assert_eq!(parse_single_piece("??#??", 3), Some(3));
+        assert_eq!(parse_single_piece("?#??", 3), Some(2));
+        assert_eq!(parse_single_piece("?#?", 3), Some(1));
+        assert_eq!(parse_single_piece("??#??", 4), Some(2));
+        assert_eq!(parse_single_piece("???????#????", 4), Some(4));
+        assert_eq!(parse_single_piece("???????#??", 5), Some(3));
+        assert_eq!(parse_single_piece("???????#????????", 5), Some(5));
+
+        // assert_eq!(parse_single_piece("###", 2), None);
+    }
+
+    #[test]
+    fn test_parse_two_in_one_piece() {
+        assert_eq!(parse_two_in_one_piece("???", vec![2,1]), None);
+        assert_eq!(parse_two_in_one_piece("????", vec![2,1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("?#??", vec![2,1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("???#", vec![2,1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("##?#", vec![2,1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![2,1]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![1,2]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![2,1]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![2,3]), Some(4));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![2,3]), Some(4));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![3,1]), Some(5));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![3,1]), Some(5));
+
+        assert_eq!(parse_two_in_one_piece("?#???????", vec![3,1]), Some(9));
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,1]), Some(15));
+
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,1]), Some(15));
+        assert_eq!(parse_two_in_one_piece("???#???????", vec![3,1]), Some(15));
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,2]), Some(12));
+
+        assert_eq!(parse_two_in_one_piece("????#???????", vec![3,1]), Some(16));
+        assert_eq!(parse_two_in_one_piece("?????#???????", vec![3,1]), Some(17));
+    }
+
+    #[test]
+    fn test_sharp_position() {
+        assert_eq!(sharp_position("###"), (0, 2));
+        assert_eq!(sharp_position("?###???"), (1, 3));
+        assert_eq!(sharp_position("???###"), (3, 5));
+        assert_eq!(sharp_position("?#?#?#"), (1, 1));
+        assert_eq!(sharp_position("?#?#?#"), (1, 1));
+        assert_eq!(sharp_position("?????#"), (5, 5));
+    }
+
+    #[test]
+    fn test_range() {
+        assert_eq!(find_first_range("###", 3), (0, 2));        // max - min - num + 2
+        assert_eq!(find_first_range("????##????", 3), (3, 6)); // 6 - 3 - 3 + 2 = 2
+        assert_eq!(find_first_range("?????#???????", 3), (3, 7)); // 7 - 3 - 3 + 2 = 3
+        assert_eq!(find_first_range("???#???????", 3), (1, 5)); // 5 - 3 - 1 + 2 = 3
+        assert_eq!(find_first_range("?#???????", 3), (0, 3));  // 5 - 5 - 0 + 2 = 2
+        assert_eq!(find_first_range("?#???????", 5), (0, 5));  // 5 - 5 - 0 + 2 = 2
+        assert_eq!(find_first_range("??????#??", 5), (2, 8));  // 8 - 5 - 2 + 2 = 3
+        assert_eq!(find_first_range("???#???????", 3), (1, 5));  // 8 - 5 - 2 + 2 = 3
+        // assert_eq!(find_range("###", 3), (0, 2));
+
+        assert_eq!(find_first_range("?#?#??#??", 5), (0, 5));  // 8 - 5 - 2 + 2 = 3
+        assert_eq!(find_first_range("?#?#??#??", 5), (0, 5));  // 8 - 5 - 2 + 2 = 3
+        assert_eq!(find_first_range("?#?#??#??", 5), (0, 5));  // 8 - 5 - 2 + 2 = 3
+    }
+
+    #[test]
+    fn test_max_sharp_position() {
+        assert_eq!(max_sharp_position("###"), 2);
+        assert_eq!(max_sharp_position("????##????"), 5);
+        assert_eq!(max_sharp_position("?????##??????"), 6);
+        assert_eq!(max_sharp_position("???#???????"), 3);
+        assert_eq!(max_sharp_position("?#???????"), 1);
+        assert_eq!(max_sharp_position("?#??????#"), 8);
+        assert_eq!(max_sharp_position("??????#??"), 6);
+    }
 }
