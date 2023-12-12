@@ -14,7 +14,9 @@ fn main() {
     part2(&contents[..]);
 }
 
-fn part1(content: &str) {}
+fn part1(content: &str) {
+
+}
 
 fn part2(content: &str) {
 }
