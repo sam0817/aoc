@@ -25,7 +25,6 @@ fn parse_raw_data_per_line(content: &str) -> Vec<(String, Vec<i32>)> {
         // println!("data: {}, nums: {:?}", data, nums);
         (data.to_string(), nums)
     }).collect::<Vec<_>>()
-
 }
 
 fn reduce_dot(data: &str) -> String {
@@ -41,8 +40,8 @@ fn reduce_dot(data: &str) -> String {
 
 fn max_sharp_position(data: &str) -> usize {
     let mut count = 0;
-    for c in  data.chars().rev() {
-        count+= 1;
+    for c in data.chars().rev() {
+        count += 1;
         if c == '#' {
             break;
         }
@@ -50,7 +49,7 @@ fn max_sharp_position(data: &str) -> usize {
     data.len() - count
 }
 
-fn sharp_position(data: &str) -> (usize,usize) {
+fn sharp_position(data: &str) -> (usize, usize) {
     let mut start = -1;
     let mut end = 0;
     for (i, c) in data.chars().enumerate() {
@@ -65,8 +64,10 @@ fn sharp_position(data: &str) -> (usize,usize) {
 }
 
 fn find_first_range(data: &str, num: usize) -> (usize, usize) {
+    if data.len() < num { return (0, 0); }
+    if data.chars().all(|x| x == '?') { return (0, data.len()-1); }
     let (start, end) = sharp_position(data);
-    let min =  end as isize + 1  - num as isize;
+    let min = end as isize + 1 - num as isize;
     let min = min.max(0) as usize;
     let max = start + num - 1;
     let max = max.min(data.len() - 1);
@@ -83,7 +84,7 @@ fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
     }
 
     if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == 0 {
-        return Some(data.len()  + 1 - num);
+        return Some(data.len() + 1 - num);
     }
 
     let iter = data.as_bytes();
@@ -99,8 +100,8 @@ fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
 }
 
 fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
-    if data.len() < nums[0] + nums[1] +1 { return None; }
-    if data.len() == nums[0] + nums[1] +1 { return Some(1); }
+    if data.len() < nums[0] + nums[1] + 1 { return None; }
+    if data.len() == nums[0] + nums[1] + 1 { return Some(1); }
 
     let iter = data.as_bytes();
     if iter[0] == '#' as u8 {
@@ -121,7 +122,7 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     for i in min..=(max - nums[0] + 1) {
         let end = i + nums[0];
         if iter[end] == '#' as u8 { continue; }
-        let remaining = &data[(end+1)..];
+        let remaining = &data[(end + 1)..];
         let r = parse_single_piece(remaining, nums[1]);
         if r.is_some() { combinations += r.unwrap(); }
     }
@@ -131,11 +132,80 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     for i in min..=(max - nums[1] + 1) {
         let end = i + nums[1];
         if iter[end] == '#' as u8 { continue; }
-        let remaining = &rev[(end+1)..];
+        let remaining = &rev[(end + 1)..];
         let r = parse_single_piece(remaining, nums[0]);
         if r.is_some() { combinations += r.unwrap(); }
     }
 
+
+    Some(combinations)
+}
+
+fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
+    let min_len = nums.iter().sum::<usize>() + nums.len() - 1;
+    if data.len() < min_len { return None; }
+    if data.len() == min_len { return Some(1); }
+
+    let iter = data.as_bytes();
+    if iter[0] == '#' as u8 {
+        let num = nums[0] + 1; // add split dot
+        let remaining = &data[num..];
+        let r_nums = nums[1..].to_vec();
+        if r_nums.len() == 1 { return parse_single_piece(remaining, r_nums[0]); }
+        return parse_n_in_one_piece(remaining, r_nums);
+    }
+
+    if iter[data.len() - 1] == '#' as u8 {
+        let num = nums[nums.len() - 1]; // num - 1 + 1
+        let remaining = &data[..data.len() - num - 1];
+        let r_nums = nums[..(nums.len() - 1)].to_vec();
+        if r_nums.len() == 1 { return parse_single_piece(remaining, r_nums[0]); }
+        return parse_n_in_one_piece(remaining, r_nums);
+    }
+
+
+    let mut combinations = 0;
+    let (min, max) = find_first_range(data, nums[0]);
+
+    // ???## , 2
+    if min > nums[0] {
+        let data_rev = data.chars().rev().collect::<String>();
+        let nums_rev = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
+        return parse_n_in_one_piece(data_rev.as_str(), nums_rev);
+    }
+
+    for i in min..=(max - nums[0] + 1) {
+        let end = i + nums[0];
+        if end >= data.len() { continue; }
+        if iter[end] == '#' as u8 { continue; }
+        let remaining = &data[(end + 1)..];
+        let r_nums = nums[1..].to_vec();
+        let r = if r_nums.len() == 1 {
+            parse_single_piece(remaining, r_nums[0])
+        } else {
+            parse_n_in_one_piece(remaining, r_nums)
+        };
+        if r.is_some() { combinations += r.unwrap(); }
+    }
+
+    if data.chars().all(|x| x == '?') { return Some(combinations); }
+
+    let rev = data.chars().rev().collect::<String>();
+    let rev_nums = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
+    let (min, max) = find_first_range(&rev[..], rev_nums[0]);
+    for i in min..=(max - rev_nums[0] + 1) {
+        let end = i + rev_nums[0];
+        if end >= rev.len() { continue; }
+        if iter[end] == '#' as u8 { continue; }
+        let remaining = &rev[(end + 1)..];
+        let r_nums = rev_nums[1..].to_vec();
+        let r = if r_nums.len() == 1 {
+            parse_single_piece(remaining, r_nums[0])
+        } else {
+            parse_n_in_one_piece(remaining, r_nums)
+        };
+        if r.is_some() { combinations += r.unwrap(); }
+    }
 
     Some(combinations)
 }
@@ -213,28 +283,90 @@ mod tests {
 
     #[test]
     fn test_parse_two_in_one_piece() {
-        assert_eq!(parse_two_in_one_piece("???", vec![2,1]), None);
-        assert_eq!(parse_two_in_one_piece("????", vec![2,1]), Some(1));
-        assert_eq!(parse_two_in_one_piece("?#??", vec![2,1]), Some(1));
-        assert_eq!(parse_two_in_one_piece("???#", vec![2,1]), Some(1));
-        assert_eq!(parse_two_in_one_piece("##?#", vec![2,1]), Some(1));
-        assert_eq!(parse_two_in_one_piece("#????????", vec![2,1]), Some(6));
-        assert_eq!(parse_two_in_one_piece("????????#", vec![1,2]), Some(6));
-        assert_eq!(parse_two_in_one_piece("????????#", vec![2,1]), Some(6));
-        assert_eq!(parse_two_in_one_piece("????????#", vec![2,3]), Some(4));
-        assert_eq!(parse_two_in_one_piece("#????????", vec![2,3]), Some(4));
-        assert_eq!(parse_two_in_one_piece("????????#", vec![3,1]), Some(5));
-        assert_eq!(parse_two_in_one_piece("#????????", vec![3,1]), Some(5));
+        assert_eq!(parse_two_in_one_piece("???", vec![2, 1]), None);
+        assert_eq!(parse_two_in_one_piece("????", vec![2, 1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("?#??", vec![2, 1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("???#", vec![2, 1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("##?#", vec![2, 1]), Some(1));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![2, 1]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![1, 2]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![2, 1]), Some(6));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![2, 3]), Some(4));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![2, 3]), Some(4));
+        assert_eq!(parse_two_in_one_piece("????????#", vec![3, 1]), Some(5));
+        assert_eq!(parse_two_in_one_piece("#????????", vec![3, 1]), Some(5));
 
-        assert_eq!(parse_two_in_one_piece("?#???????", vec![3,1]), Some(9));
-        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,1]), Some(15));
+        assert_eq!(parse_two_in_one_piece("?#???????", vec![3, 1]), Some(9));
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3, 1]), Some(15));
 
-        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,1]), Some(15));
-        assert_eq!(parse_two_in_one_piece("???#???????", vec![3,1]), Some(15));
-        assert_eq!(parse_two_in_one_piece("??#???????", vec![3,2]), Some(12));
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3, 1]), Some(15));
+        assert_eq!(parse_two_in_one_piece("???#???????", vec![3, 1]), Some(15));
+        assert_eq!(parse_two_in_one_piece("??#???????", vec![3, 2]), Some(12));
 
-        assert_eq!(parse_two_in_one_piece("????#???????", vec![3,1]), Some(16));
-        assert_eq!(parse_two_in_one_piece("?????#???????", vec![3,1]), Some(17));
+        assert_eq!(parse_two_in_one_piece("????#???????", vec![3, 1]), Some(16));
+        assert_eq!(parse_two_in_one_piece("?????#???????", vec![3, 1]), Some(17));
+
+        assert_eq!(parse_two_in_one_piece("?#???#???????", vec![3, 1]), Some(2));
+    }
+
+    #[test]
+    fn test_parse_n_in_one_piece_complex() {
+        assert_eq!(parse_n_in_one_piece("?#?????#?", vec![1, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("?#??#???#?", vec![1, 1, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("??#??????#?", vec![3, 4, 2]), Some(1));
+        assert_eq!(parse_n_in_one_piece("??#??????#?", vec![3, 3, 2]), Some(4));
+        assert_eq!(parse_n_in_one_piece("??#??????#?", vec![3, 1, 2]), Some(15));
+        // ??#??????#?
+        // ###.#....## 4
+        // ###.#...##. 3
+        // .###.#...## 3
+        // .###.#..##. 2
+        // ..###.#..## 2
+        // ..###.#.##. 1
+    }
+
+    #[test]
+    fn test_parse_n_in_one_piece() {
+        assert_eq!(parse_n_in_one_piece("???", vec![2, 1]), None);
+        assert_eq!(parse_n_in_one_piece("????", vec![2, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("?#??", vec![2, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("???#", vec![2, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("##?#", vec![2, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("#????????", vec![2, 1]), Some(6));
+        assert_eq!(parse_n_in_one_piece("????????#", vec![1, 2]), Some(6));
+        assert_eq!(parse_n_in_one_piece("????????#", vec![2, 1]), Some(6));
+        assert_eq!(parse_n_in_one_piece("????????#", vec![2, 3]), Some(4));
+        assert_eq!(parse_n_in_one_piece("#????????", vec![2, 3]), Some(4));
+        assert_eq!(parse_n_in_one_piece("????????#", vec![3, 1]), Some(5));
+        assert_eq!(parse_n_in_one_piece("#????????", vec![3, 1]), Some(5));
+
+        assert_eq!(parse_n_in_one_piece("?#???????", vec![3, 1]), Some(9));
+        assert_eq!(parse_n_in_one_piece("??#???????", vec![3, 1]), Some(15));
+
+        assert_eq!(parse_n_in_one_piece("??#???????", vec![3, 1]), Some(15));
+        assert_eq!(parse_n_in_one_piece("???#???????", vec![3, 1]), Some(15));
+        assert_eq!(parse_n_in_one_piece("??#???????", vec![3, 2]), Some(12));
+
+        assert_eq!(parse_n_in_one_piece("????#???????", vec![3, 1]), Some(16));
+        assert_eq!(parse_n_in_one_piece("?????#???????", vec![3, 1]), Some(17));
+
+        assert_eq!(parse_n_in_one_piece("?????", vec![3, 1]), Some(1));
+        // assert_eq!(parse_n_in_one_piece("??????", vec![3, 1]), Some(3));
+        assert_eq!(parse_n_in_one_piece("????#?", vec![3, 1]), Some(1));
+        assert_eq!(parse_n_in_one_piece("?????#?", vec![3, 1]), Some(2));
+        assert_eq!(parse_n_in_one_piece("?????#?", vec![3, 2]), Some(3));
+
+        assert_eq!(parse_n_in_one_piece("#???????", vec![3, 1, 2]), Some(1));
+        assert_eq!(parse_n_in_one_piece("#????????", vec![3, 1, 2]), Some(3));
+        assert_eq!(parse_n_in_one_piece("#?????????", vec![3, 1, 2]), Some(6));
+        assert_eq!(parse_n_in_one_piece("?#????????", vec![3, 1, 2]), Some(9));
+        assert_eq!(parse_n_in_one_piece("??#????????", vec![3, 1, 2]), Some(19));
+
+        assert_eq!(parse_n_in_one_piece("?????#?", vec![1, 2]), Some(7));
+        assert_eq!(parse_n_in_one_piece("????#?", vec![1, 2]), Some(5));
+        assert_eq!(parse_n_in_one_piece("???#?", vec![1, 2]), Some(3));
+
+        assert_eq!(parse_n_in_one_piece("??#????????", vec![3, 1, 2]), Some(19));
     }
 
     #[test]
@@ -249,6 +381,8 @@ mod tests {
 
     #[test]
     fn test_range() {
+        assert_eq!(find_first_range("??????", 3), (0, 5));        // max - min - num + 2
+
         assert_eq!(find_first_range("###", 3), (0, 2));        // max - min - num + 2
         assert_eq!(find_first_range("????##????", 3), (3, 6)); // 6 - 3 - 3 + 2 = 2
         assert_eq!(find_first_range("?????#???????", 3), (3, 7)); // 7 - 3 - 3 + 2 = 3
