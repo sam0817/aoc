@@ -1,5 +1,4 @@
 use std::fs;
-use log::log;
 
 fn main() {
     // let contents = fs::read_to_string("input")
@@ -120,12 +119,23 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     if nums.len() == 0 { return Some(1); }
     if data.len() < nums[0] + nums[1] + 1 { return None; }
     if data.len() == nums[0] + nums[1] + 1 { return Some(1); }
+    let iter = data.as_bytes();
+
+    // ??????? , 2, 2 (7,2,2) -> (5, 1, 1) ??????
+    if iter.iter().all(|x| *x == ('?' as u8)) {
+        let mut len = iter.len();
+        nums.iter().for_each(|x| len -= (x - 1));
+        let n = len - nums.len() + 1;
+        let x = nums.len();
+        if n < x { return None; }
+        return Some(count_combinations(n, x));
+    }
+
     let max = max_sharp_position(data);
     let (start, end) = sharp_position(data);
     let max_len_limit = nums.iter().sum::<usize>() + nums.len() - 1;
-    if (max - start +1 ) > max_len_limit { return  None }
+    if (max - start + 1 ) > max_len_limit { return  None }
 
-    let iter = data.as_bytes();
     if iter[0] == '#' as u8 {
         let num = nums[0] + 1; // add split dot
         let remaining = &data[num..];
@@ -138,15 +148,6 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
         return parse_single_piece(remaining, nums[0]);
     }
 
-    // ??????? , 2, 2 (7,2,2) -> (5, 1, 1) ??????
-    if iter.iter().all(|x| *x == ('?' as u8)) {
-        let mut len = iter.len();
-        nums.iter().for_each(|x| len -= (x - 1));
-        let n = len - nums.len() + 1;
-        let x = nums.len();
-        if n < x { return None; }
-        return Some(count_combinations(n, x));
-    }
 
     // 012345678
     // ?#??????? , 3 => (0, 3)
@@ -154,6 +155,7 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     let (min, max) = find_first_range(data, nums[0]);
     for i in min..=(max - nums[0] + 1) {
         let end = i + nums[0];
+        // if end >= data.len() { continue; }
         if iter[end] == '#' as u8 { continue; }
         let remaining = &data[(end + 1)..];
         let r = parse_single_piece(remaining, nums[1]);
@@ -185,7 +187,6 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     if data.len() == min_len { return Some(1); }
 
     let iter = data.as_bytes();
-
     if iter.iter().all(|x| *x == ('?' as u8)) {
         let mut len = iter.len();
         nums.iter().for_each(|x| len -= (x - 1));
@@ -224,7 +225,7 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
 
     for i in min..=(max - nums[0] + 1) {
         let end = i + nums[0];
-        if end >= data.len() { continue; }
+        if end >= data.len() { continue; } // ??????
         if iter[end] == '#' as u8 { continue; }
         let remaining = &data[(end + 1)..];
         let r_nums = nums[1..].to_vec();
@@ -236,38 +237,36 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
         if r.is_some() { combinations += r.unwrap(); }
     }
 
-    // if data.chars().all(|x| x == '?') { return Some(combinations); }
-
-    // let rev = data.chars().rev().collect::<String>();
-    // let rev_nums = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
-    // let (min, max) = find_first_range(&rev[..], rev_nums[0]);
-    // for i in min..=(max - rev_nums[0] + 1) {
-    //     let end = i + rev_nums[0];
-    //     if end >= rev.len() { continue; }
-    //     if iter[end] == '#' as u8 { continue; }
-    //     let remaining = &rev[(end + 1)..];
-    //     let r_nums = rev_nums[1..].to_vec();
-    //     let r = if r_nums.len() == 1 {
-    //         parse_single_piece(remaining, r_nums[0])
-    //     } else {
-    //         parse_n_in_one_piece(remaining, r_nums)
-    //     };
-    //     if r.is_some() { combinations += r.unwrap(); }
-    // }
-
     let (start, end) = sharp_position(data);
-    if start > nums[0] {
-        for i in 0..=(start - nums[0] - 1) {
-            let idx = i + nums[0] + 1;
-            let r_data = &data[idx..];
+    let max = max_sharp_position(data);
+    if start > nums[0]  {
+        // ????#??? len: 8 max 5 : limit 2, start 4
+        // if  data.len() - max < nums[nums.len() - 1] + 1 {
+        //     for i in 0..=(start - nums[0] - 1) {
+        //         let idx = i + nums[0] + 1;
+        //         let r_data = &data[idx..];
+        //         let r_nums = nums[1..].to_vec();
+        //         let r = if r_nums.len() == 1 {
+        //             parse_single_piece(r_data, r_nums[0])
+        //         } else {
+        //             parse_n_in_one_piece(r_data, r_nums)
+        //         };
+        //         if r.is_some() { combinations += r.unwrap(); }
+        //     }
+        // } else {
+        for i in 0..min {
+            let cut = i + nums[0] + 1;
+            if iter[cut - 1] == '#' as u8 { continue; }
+            let remaining = &data[cut..];
             let r_nums = nums[1..].to_vec();
             let r = if r_nums.len() == 1 {
-                parse_single_piece(r_data, r_nums[0])
+                parse_single_piece(remaining, r_nums[0])
             } else {
-                parse_n_in_one_piece(r_data, r_nums)
+                parse_n_in_one_piece(remaining, r_nums)
             };
             if r.is_some() { combinations += r.unwrap(); }
         }
+        // }
     }
 
     Some(combinations)
@@ -296,6 +295,7 @@ fn min_len_required(nums: Vec<usize>) -> usize {
 }
 
 fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
+    println!("data: {:?}, nums: {:?}", data, nums);
     if nums.len() == 0 { return 1 }
     if data.len() == 0 { return 0 }
     if data.len() == 1 {
@@ -322,7 +322,7 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
             let r2 = parse_chooser(&data[1][..], nums_2.to_vec());
             sum += (r1 * r2);
 
-            // println!("2i: {}, {:?}  num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, data, nums_1, nums_2, r1, r2);
+            println!("2i: {}, {:?}  num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, data, nums_1, nums_2, r1, r2);
         }
         return sum;
     }
@@ -332,7 +332,7 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
         for di  in 1..data.len() {
             let data_1 = data[..di].to_vec();
             let data_2 = data[di..].to_vec();
-            // println!("data_i: {}, data_1: {:?}, data_2:{:?}, ", di, data_1, data_2);
+            println!("data_i: {}, data_1: {:?}, data_2:{:?}, ", di, data_1, data_2);
             for i  in 0..=nums.len() {
                 let nums_1 = nums[..i].to_vec();
                 let r1 = loop_data_matching(data_1.clone(), nums_1.to_vec());
@@ -471,6 +471,19 @@ mod tests {
         // ....#.#..######## -> 3
         // ....#.#.########. -> 3
         // #.#.#.########... -> 1
+        assert_eq!(parse_n_in_one_piece("?##?????#??????", vec![3,1,3,1,1]), Some(20));
+        // ?##?????#??????
+        // .###..#.###.... -> 1
+        // .###.#..###.... -> 1
+        // .###.#.###..... -> 3
+        // ###...#.###.... -> 1  ---- 15
+        // ###..#.###..... -> 3
+        // ###..#..###.... -> 1
+        // ###.#.###.#.#.. -> 3
+        // ###.#.###..#.#. -> 2
+        // ###.#.###...#.# -> 1
+        // ###.#..###.#.#. -> 3
+        // ###.#...###.#.# -> 1
     }
 
     #[test]
