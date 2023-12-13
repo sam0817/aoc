@@ -1,8 +1,8 @@
 use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -371,7 +371,7 @@ fn gen_one(num: usize, len: usize) -> Vec<Vec<char>> {
     result
 }
 
-fn match_string(mask:String, trial:String) -> bool {
+fn match_string(mask:&str, trial:&str) -> bool {
     if mask.len() != trial.len() { return false; }
 
     for (m, t) in mask.chars().zip(trial.chars()) {
@@ -424,7 +424,7 @@ fn part1(content: &str) {
         let options = gen_possibility(nums.clone(), data.len());
         let mut sum = 0;
         options.iter().for_each(|x| {
-            if match_string(data.clone(), x.clone()) {
+            if match_string(&data[..], &x[..]) {
                 sum+=1;
             }
         });
@@ -434,19 +434,75 @@ fn part1(content: &str) {
     println!("grant_total: {}", grant_total)
 }
 
+fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, str: &str) -> Vec<String> {
+    if nums.len() == 0 {
+        let str = vec!['.';len];
+        return vec![str.iter().collect::<String>()];
+    }
+    if nums.len() == 1 { return  gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>()}
+    if len == 0 { return vec![]; }
+    let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
+    // println!("len: {}, min_req:{}" , len, min_req );
+    if len < min_req { return vec![]; }
+    if len == min_req {
+        let mut result : Vec<char> = vec![];
+        nums.iter().enumerate().for_each(|(idx,n)|{
+            if idx > 0 { result.push('.'); }
+            let mut piece = vec!['#';*n];
+            result.append(&mut piece)
+        });
+        return vec![result.iter().collect::<String>()];
+    }
+    // println!("nums: {:?}, len: {}, min_req: {}, str: {}", nums, len, min_req, str);
+    let mut result = vec![];
+    for i in 0..=(len - min_req) {
+        // println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
+        let r_len = len - nums[0] - i -1;
+        let r_nums = nums[1..].to_vec();
+        let mut prefix = vec!['.'; i - 0];
+        let mut piece = vec!['#';nums[0]];
+        piece.push('.');
+        let now_len = piece.len();
+        let p_data = &str[..now_len];
+        // println!("p_data: {}, piece: {:?}", p_data, piece);
+        if !match_string(p_data, &piece.iter().collect::<String>()[..]) { continue; }
+        let r_data = &str[(now_len)..];
+        prefix.append(&mut piece.clone());
+        let str = prefix.iter().collect::<String>();
+        let others = gen_possibility_with_compare(r_nums, r_len, r_data);
+        others.iter().for_each(|x| result.push(str.clone() + x));
+    }
+    result
+}
+
 fn part2(content: &str) {
 
     let data = parse_raw_data_per_line(content);
-    // data.iter().for_each(|(data, nums)| {
-    //     let data = reduce_dot(data);
-    //     println!("data: {}, nums: {:?}", data, nums);
-    // });
-    // let p = gen_possibility(vec![1,2],6);
-    // println!("p: {:?}", p);
-    // let p = gen_possibility(vec![1,3],5);
-    // println!("p: {:?}", p);
-    // let p = gen_possibility(vec![1,1,1],5);
-    // println!("p: {:?}", p);
+    let mut grant_total : usize = 0;
+    data.iter().enumerate().for_each(|(i, (data, nums))| {
+        print!("{i},");
+        let mut big_data = data.to_string();
+        let mut nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+        let mut new_nums = nums.to_vec();
+        for _ in 0..4 {
+            big_data.push('.');
+            big_data.push_str(data);
+            new_nums.append(&mut nums.to_vec())
+        }
+        let data = reduce_dot(&big_data[..]);
+
+        println!("data: {:?}, nums: {:?}", data, new_nums);
+        let options = gen_possibility_with_compare(new_nums.clone(), data.len(), &data[..]);
+        let mut sum = 0;
+        options.iter().for_each(|x| {
+            if match_string(&data[..], &x[..]) {
+                sum+=1;
+            }
+        });
+        println!("{i}, ---> {}", sum);
+        grant_total += sum as usize;
+    });
+    println!("grant_total: {}", grant_total)
 }
 
 
