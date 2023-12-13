@@ -2,8 +2,8 @@ use std::fs;
 use log::log;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-        // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+        let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -117,6 +117,7 @@ fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
 }
 
 fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
+    if nums.len() == 0 { return Some(1); }
     if data.len() < nums[0] + nums[1] + 1 { return None; }
     if data.len() == nums[0] + nums[1] + 1 { return Some(1); }
 
@@ -174,6 +175,7 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
 }
 
 fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
+    if nums.len() == 0 { return Some(1); }
     let min_len = nums.iter().sum::<usize>() + nums.len() - 1;
     if data.len() < min_len { return None; }
     if data.len() == min_len { return Some(1); }
@@ -267,11 +269,82 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     Some(combinations)
 }
 
+fn split_data(data: &str) -> Vec<String> {
+    // let data = reduce_dot(data);
+    let mut split = data.split(".").collect::<Vec<&str>>();
+    split.remove(0);
+    split.remove(split.len() - 1);
+    split.iter().map(|x| x.to_string()).collect::<Vec<String>>()
+}
+
+fn parse_chooser(data: &str, nums: Vec<usize>) -> usize {
+    if nums.len() == 0 {return  0}
+    if nums.len() == 1 { return parse_single_piece(data, nums[0]).unwrap_or(0); }
+    if nums.len() == 2 { return parse_two_in_one_piece(data, nums).unwrap_or(0); }
+    if nums.len() > 2 { return parse_n_in_one_piece(data, nums).unwrap_or(0); }
+    0
+}
+
+fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
+    if data.len() == 0 { return 0 }
+    if nums.len() == 0 { return 1 }
+    if data.len() == 1 {
+        let r = parse_n_in_one_piece(&data[0][..], nums);
+        if r.is_some() { return r.unwrap(); }
+        return 0;
+    }
+    // ????
+    if data.len() == 2 {
+        let mut sum  = 0;
+        if nums.len() == 1 {
+            let r1 = parse_single_piece(&data[0][..], nums[0]);
+            let r2 = parse_single_piece(&data[1][..], nums[0]);
+            return r1.unwrap_or(0) + r2.unwrap_or(0);
+        }
+        for i  in 0..=nums.len() {
+            if nums.len() == 1 { println!("nums: {:?}", nums)}
+            let nums_1 = nums[..i].to_vec();
+            let r1 = parse_chooser(&data[0][..], nums_1.to_vec());
+            let nums_2 = nums[i..].to_vec();
+            let r2 = parse_chooser(&data[1][..], nums_2.to_vec());
+            sum += (r1 * r2);
+            if nums.len() == 1 {
+
+                println!("2i: {}, {:?}  num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, data, nums_1, nums_2, r1, r2);
+            }
+        }
+        return sum;
+    }
+    if data.len() > 2 {
+        let mut sum  = 0;
+
+        for di  in 1..data.len() {
+            let data_1 = data[..di].to_vec();
+            let data_2 = data[di..].to_vec();
+            // println!("data_i: {}, data_1: {:?}, data_2:{:?}, ", di, data_1, data_2);
+            for i  in 0..=nums.len() {
+                let nums_1 = nums[..i].to_vec();
+                let r1 = loop_data_matching(data_1.clone(), nums_1.to_vec());
+                let nums_2 = nums[i..].to_vec();
+                let r2 = loop_data_matching(data_2.clone(), nums_2.to_vec());
+                sum += (r1 * r2);
+                // println!("ii: {}, num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, nums_1, nums_2, r1, r2);
+                // println!("num_i: {}, num_1: {:?}, num_2:{:?} ----> {}", i, nums_1, nums_2, sum);
+            }
+        }
+        return sum / 2;
+    }
+    0
+}
+
 fn part1(content: &str) {
     let data = parse_raw_data_per_line(content);
-    data.iter().for_each(|(data, nums)| {
+    data.iter().enumerate().for_each(|(i,(data, nums))| {
         let data = reduce_dot(data);
-        println!("data: {}, nums: {:?}", data, nums);
+        let data = split_data(&data[..]);
+        let r_nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+        let r = loop_data_matching(data.clone(), r_nums);
+        println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, r);
     });
 }
 
