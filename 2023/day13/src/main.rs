@@ -7,9 +7,10 @@ fn main() {
         .expect("Should have been able to read the file");
     println!("---------- part1 ----------");
     // part 1
-    part1(&contents[..]);
+    part1(&contents[..]); // 32723
     // 17255 --> too low
     // 17614 -> not the right answer
+    // 20049 -> not the right answer
     // 32934 -> too high
     // 18558 -> too low
 
@@ -62,7 +63,7 @@ fn parse_vertical(data: HashMap<(usize, usize), usize>) {
                 count += 1;
             }
         }
-        println!("count: {}", count);
+        // println!("count: {}", count);
     }
 }
 
@@ -139,8 +140,17 @@ fn cal_row_min(data: &Vec<Vec<isize>>) -> Vec<isize> {
         result.push(min);
         // println!("min: {}", min);
     }
-    println!("result: {:?}", result);
+    // println!("result: {:?}", result);
     result
+}
+
+fn cal_exp_for_row(data: &Vec<isize>) -> usize {
+    let len = data.len();
+    for i in 1..len {
+        let expected = (len - i).min(i);
+        if data[i] == expected as isize { return i }
+    }
+    0
 }
 
 fn part1(content: &str) {
@@ -169,9 +179,15 @@ fn part1(content: &str) {
             r
         }).collect::<Vec<_>>();
         let rs = cal_row_min(&rows);
+        // let r_max = rs.iter().max().unwrap().clone();
+        // let r = rs.iter().position(|x| *x == r_max).unwrap_or(0);
+        let r = cal_exp_for_row(&rs);
         let cs = cal_row_min(&col);
-        let r = rs.iter().position(|x| *x != 0).unwrap_or(0);
-        let c = cs.iter().position(|x| *x != 0).unwrap_or(0);
+        // let c_max = cs.iter().max().unwrap().clone();
+        // let c = cs.iter().position(|x| *x == c_max).unwrap_or(0);
+        let c = cal_exp_for_row(&cs);
+        // println!(" rs: {:?}, r: {}", rs, r);
+        // println!(" cs: {:?}, c: {}", cs, c);
         // let r = row.iter().min().unwrap().clone();
         // let c = col.iter().min().unwrap().clone();
         (r, c)
@@ -179,11 +195,11 @@ fn part1(content: &str) {
     println!("stages: {:?}", stages);
     let mut sum = 0;
     stages.iter().enumerate().for_each(|(i, (r, c))| {
-       if i % 2 == 0 {
+       // if i % 2 == 0 {
            sum += r ;
-       } else {
+       // } else {
            sum += c * 100;
-       }
+       // }
         // println!("stage: {}, r: {}, c: {}", i, r, c);
         // sum += r + c;
     });

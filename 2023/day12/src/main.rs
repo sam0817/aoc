@@ -1,8 +1,8 @@
 use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-        // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+        let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
