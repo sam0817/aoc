@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
     println!("---------- part1 ----------");
     // part 1
@@ -17,6 +17,7 @@ fn main() {
     println!("---------- part2 ----------");
     // part 2
     part2(&contents[..]);
+    // 7158 -> not the right answer
 }
 
 fn parse_data(content: &str) -> HashMap::<usize, Vec<(usize, usize, usize)>> {
@@ -165,32 +166,33 @@ fn part1(content: &str) {
     // parse_one_matrix_2(data.get(&0).unwrap().to_vec());
     // println!("matrix: {:?}", matrix);
     let stages = matrix.iter().map(|m| {
-        let rows = m.iter().map(|line| {
-            let r = parse_one_line(line.to_vec());
-            // println!("r1: {:?}", r);
-            // let r = calculate_line_left(r);
-
-            // println!("r2: {:?}", r);
-            r
-        }).collect::<Vec<_>>();
-        let col = transport(m.to_vec()).iter().map(|line| {
-            let r = parse_one_line(line.to_vec());
-            // let r = calculate_line_left(r);
-            r
-        }).collect::<Vec<_>>();
-        let rs = cal_row_min(&rows);
-        // let r_max = rs.iter().max().unwrap().clone();
-        // let r = rs.iter().position(|x| *x == r_max).unwrap_or(0);
-        let r = cal_exp_for_row(&rs);
-        let cs = cal_row_min(&col);
-        // let c_max = cs.iter().max().unwrap().clone();
-        // let c = cs.iter().position(|x| *x == c_max).unwrap_or(0);
-        let c = cal_exp_for_row(&cs);
-        // println!(" rs: {:?}, r: {}", rs, r);
-        // println!(" cs: {:?}, c: {}", cs, c);
-        // let r = row.iter().min().unwrap().clone();
-        // let c = col.iter().min().unwrap().clone();
-        (r, c)
+        find_r_c(m)
+        // let rows = m.iter().map(|line| {
+        //     let r = parse_one_line(line.to_vec());
+        //     // println!("r1: {:?}", r);
+        //     // let r = calculate_line_left(r);
+        //
+        //     // println!("r2: {:?}", r);
+        //     r
+        // }).collect::<Vec<_>>();
+        // let col = transport(m.to_vec()).iter().map(|line| {
+        //     let r = parse_one_line(line.to_vec());
+        //     // let r = calculate_line_left(r);
+        //     r
+        // }).collect::<Vec<_>>();
+        // let rs = cal_row_min(&rows);
+        // // let r_max = rs.iter().max().unwrap().clone();
+        // // let r = rs.iter().position(|x| *x == r_max).unwrap_or(0);
+        // let r = cal_exp_for_row(&rs);
+        // let cs = cal_row_min(&col);
+        // // let c_max = cs.iter().max().unwrap().clone();
+        // // let c = cs.iter().position(|x| *x == c_max).unwrap_or(0);
+        // let c = cal_exp_for_row(&cs);
+        // // println!(" rs: {:?}, r: {}", rs, r);
+        // // println!(" cs: {:?}, c: {}", cs, c);
+        // // let r = row.iter().min().unwrap().clone();
+        // // let c = col.iter().min().unwrap().clone();
+        // (r, c)
     }).collect::<Vec<_>>();
     println!("stages: {:?}", stages);
     let mut sum = 0;
@@ -206,4 +208,66 @@ fn part1(content: &str) {
     println!("sum: {}", sum);
 }
 
-fn part2(content: &str) {}
+fn find_r_c (m: &Vec<Vec<bool>>) -> (usize, usize) {
+    let rows = m.iter().map(|line| {
+        let r = parse_one_line(line.to_vec());
+        r
+    }).collect::<Vec<_>>();
+    let col = transport(m.to_vec()).iter().map(|line| {
+        let r = parse_one_line(line.to_vec());
+        r
+    }).collect::<Vec<_>>();
+    let rs = cal_row_min(&rows);
+    let r = cal_exp_for_row(&rs);
+    let cs = cal_row_min(&col);
+    let c = cal_exp_for_row(&cs);
+    (r, c)
+}
+
+fn part2(content: &str) {
+    let data = parse_data(content);
+    let mut keys = data.keys().collect::<Vec<_>>();
+    keys.sort();
+    let mut matrix = keys.iter().map(|k| {
+        let m = data.get(k).unwrap().to_vec();
+        parse_one_matrix_2(m.to_vec())
+    }).collect::<Vec<_>>();
+    let stages = matrix.iter().map(|m| {
+        let ori = find_r_c(m);
+        let tr_m = transport(m.to_vec());
+        let mut res = (0, 0);
+        for i in 0..m.len() {
+            for j in 0..m[0].len() {
+                let mut m2 = m.clone();
+                m2[i][j] = !m2[i][j];
+                let d = find_r_c(&m2);
+                if d != (0, 0) { res = d; break }
+                // println!("i: {}, j: {}", i, j);
+            }
+        }
+        let mut res_tr = (0,0);
+        for i in 0..tr_m.len() {
+            for j in 0..tr_m[0].len() {
+                let mut m2 = tr_m.clone();
+                m2[i][j] = !m2[i][j];
+                let d = find_r_c(&m2);
+                if d != (0, 0) { res_tr = (d.1, d.0); break }
+                // println!("i: {}, j: {}", i, j);
+            }
+        }
+        (ori, res, res_tr)
+    }).collect::<Vec<_>>();
+    println!("stages: {:?}", stages);
+    let mut sum = 0;
+    stages.iter().enumerate().for_each(|(i, (ori, nor, tr))| {
+        // if ori == nor {
+            if ori.0 != tr.0 { sum += tr.0; }
+            if ori.1 != tr.1 { sum += tr.1 * 100; }
+        // } else {
+            if ori.0 != nor.0 { sum += nor.0; }
+            if ori.1 != nor.1 { sum += nor.1 * 100; }
+        // }
+    });
+    println!("sum: {}", sum);
+
+}
