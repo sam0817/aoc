@@ -1,8 +1,8 @@
 use std::fs;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-        let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+        // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -348,14 +348,23 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
     0
 }
 
+// ##..## 2, 2 (6) -> 1, 1 (4) C(len - interval, num.len)
+// #.#.
+// #..#
+// .#.#
+fn gen_possibility(nums: Vec<usize>, len : usize) -> Vec<String> {
+    let mut result = String::new();
+
+}
+
 fn part1(content: &str) {
     let data = parse_raw_data_per_line(content);
     data.iter().enumerate().for_each(|(i,(data, nums))| {
         let data = reduce_dot(data);
-        let data = split_data(&data[..]);
-        let r_nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
-        let r = loop_data_matching(data.clone(), r_nums);
-        println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, r);
+        // let data = split_data(&data[..]);
+        // let r_nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+        // let r = loop_data_matching(data.clone(), r_nums);
+        println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, 1);
     });
 }
 
