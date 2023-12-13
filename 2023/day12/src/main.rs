@@ -2,7 +2,7 @@ use std::fs;
 
 fn main() {
     // let contents = fs::read_to_string("input")
-        let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -134,7 +134,7 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     let max = max_sharp_position(data);
     let (start, end) = sharp_position(data);
     let max_len_limit = nums.iter().sum::<usize>() + nums.len() - 1;
-    if (max - start + 1 ) > max_len_limit { return  None }
+    if (max - start + 1) > max_len_limit { return None; }
 
     if iter[0] == '#' as u8 {
         let num = nums[0] + 1; // add split dot
@@ -239,7 +239,7 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
 
     let (start, end) = sharp_position(data);
     let max = max_sharp_position(data);
-    if start > nums[0]  {
+    if start > nums[0] {
         // ????#??? len: 8 max 5 : limit 2, start 4
         // if  data.len() - max < nums[nums.len() - 1] + 1 {
         //     for i in 0..=(start - nums[0] - 1) {
@@ -281,7 +281,7 @@ fn split_data(data: &str) -> Vec<String> {
 }
 
 fn parse_chooser(data: &str, nums: Vec<usize>) -> usize {
-    if nums.len() == 0 {return  1}
+    if nums.len() == 0 { return 1; }
     if nums.len() == 1 { return parse_single_piece(data, nums[0]).unwrap_or(0); }
     if nums.len() == 2 { return parse_two_in_one_piece(data, nums).unwrap_or(0); }
     if nums.len() > 2 { return parse_n_in_one_piece(data, nums).unwrap_or(0); }
@@ -289,15 +289,15 @@ fn parse_chooser(data: &str, nums: Vec<usize>) -> usize {
 }
 
 fn min_len_required(nums: Vec<usize>) -> usize {
-    if nums.len() == 0 { return 0 }
+    if nums.len() == 0 { return 0; }
     let sum = nums.iter().sum::<usize>();
-    sum + nums.len() -1
+    sum + nums.len() - 1
 }
 
 fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
     println!("data: {:?}, nums: {:?}", data, nums);
-    if nums.len() == 0 { return 1 }
-    if data.len() == 0 { return 0 }
+    if nums.len() == 0 { return 1; }
+    if data.len() == 0 { return 0; }
     if data.len() == 1 {
         if data[0].len() < min_len_required(nums.clone()) { return 0; }
         let r = parse_n_in_one_piece(&data[0][..], nums);
@@ -306,14 +306,14 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
     }
     // ????
     if data.len() == 2 {
-        let mut sum  = 0;
+        let mut sum = 0;
         if nums.len() == 1 {
             let r1 = parse_single_piece(&data[0][..], nums[0]);
             let r2 = parse_single_piece(&data[1][..], nums[0]);
             return r1.unwrap_or(0) + r2.unwrap_or(0);
         }
-        for i  in 0..=nums.len() {
-            if nums.len() == 1 { println!("nums: {:?}", nums)}
+        for i in 0..=nums.len() {
+            if nums.len() == 1 { println!("nums: {:?}", nums) }
             let nums_1 = nums[..i].to_vec();
             let nums_2 = nums[i..].to_vec();
             if data[0].len() < min_len_required(nums_1.clone()) { continue; }
@@ -327,13 +327,13 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
         return sum;
     }
     if data.len() > 2 {
-        let mut sum  = 0;
+        let mut sum = 0;
 
-        for di  in 1..data.len() {
+        for di in 1..data.len() {
             let data_1 = data[..di].to_vec();
             let data_2 = data[di..].to_vec();
             println!("data_i: {}, data_1: {:?}, data_2:{:?}, ", di, data_1, data_2);
-            for i  in 0..=nums.len() {
+            for i in 0..=nums.len() {
                 let nums_1 = nums[..i].to_vec();
                 let r1 = loop_data_matching(data_1.clone(), nums_1.to_vec());
                 let nums_2 = nums[i..].to_vec();
@@ -352,14 +352,64 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
 // #.#.
 // #..#
 // .#.#
-fn gen_possibility(nums: Vec<usize>, len : usize) -> Vec<String> {
-    let mut result = String::new();
 
+fn gen_one(num: usize, len: usize) -> Vec<Vec<char>> {
+    let mut result = vec![];
+    if num > len { return result; }
+    let piece = vec!['#'; num];
+    for i in 0..=(len - num) {
+        // print!("i: {}, ", i);
+        let mut prefix = vec!['.'; i - 0];
+        // println!("prefix: {:?}", prefix);
+        let postfix = vec!['.'; len - num - i];
+        // println!("prefix: {:?}", prefix);
+        prefix.append(&mut piece.clone());
+        // println!("prefix: {:?}", prefix);
+        prefix.append(&mut postfix.clone());
+        result.push(prefix);
+    }
+    result
+}
+
+
+
+fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
+    if nums.len() == 0 {
+        let str = vec!['.';len];
+        return vec![str.iter().collect::<String>()];
+    }
+    if nums.len() == 1 { return  gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>()}
+    if len == 0 { return vec![]; }
+    let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
+    if len < min_req { return vec![]; }
+    if len == min_req {
+        let mut result : Vec<char> = vec![];
+        nums.iter().enumerate().for_each(|(idx,n)|{
+            if idx > 0 { result.push('.'); }
+            let mut piece = vec!['#';*n];
+            result.append(&mut piece)
+        });
+        return vec![result.iter().collect::<String>()];
+    }
+    let mut result = vec![];
+    for i in 0..=(len - min_req) {
+        println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
+        let r_len = len - nums[0] - i -1;
+        let r_nums = nums[1..].to_vec();
+        let mut prefix = vec!['.'; i - 0];
+        let mut piece = vec!['#';nums[0]];
+        piece.push('.');
+        prefix.append(&mut piece.clone());
+        let str = prefix.iter().collect::<String>();
+        let others = gen_possibility(r_nums, r_len);
+        others.iter().for_each(|x| result.push(str.clone() + x));
+    }
+    result
 }
 
 fn part1(content: &str) {
     let data = parse_raw_data_per_line(content);
-    data.iter().enumerate().for_each(|(i,(data, nums))| {
+    data.iter().enumerate().for_each(|(i, (data, nums))| {
         let data = reduce_dot(data);
         // let data = split_data(&data[..]);
         // let r_nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
@@ -369,11 +419,18 @@ fn part1(content: &str) {
 }
 
 fn part2(content: &str) {
+
     let data = parse_raw_data_per_line(content);
-    data.iter().for_each(|(data, nums)| {
-        let data = reduce_dot(data);
-        // println!("data: {}, nums: {:?}", data, nums);
-    });
+    // data.iter().for_each(|(data, nums)| {
+    //     let data = reduce_dot(data);
+    //     // println!("data: {}, nums: {:?}", data, nums);
+    // });
+    let p = gen_possibility(vec![1,2],6);
+    println!("p: {:?}", p);
+    // let p = gen_possibility(vec![1,3],5);
+    // println!("p: {:?}", p);
+    // let p = gen_possibility(vec![1,1,1],5);
+    // println!("p: {:?}", p);
 }
 
 
@@ -381,6 +438,12 @@ fn part2(content: &str) {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_gen_one(){
+        assert_eq!(gen_one(2, 2), vec![
+            vec!['#', '#'],
+        ]);
+    }
     #[test]
     fn test_single_piece() {
         // #號數量 == num
@@ -480,7 +543,7 @@ mod tests {
         // ....#.#..######## -> 3
         // ....#.#.########. -> 3
         // #.#.#.########... -> 1
-        assert_eq!(parse_n_in_one_piece("?##?????#??????", vec![3,1,3,1,1]), Some(20));
+        assert_eq!(parse_n_in_one_piece("?##?????#??????", vec![3, 1, 3, 1, 1]), Some(20));
         // ?##?????#??????
         // .###..#.###.... -> 1
         // .###.#..###.... -> 1
