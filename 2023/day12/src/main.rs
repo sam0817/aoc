@@ -1,8 +1,8 @@
 use std::fs;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -371,7 +371,15 @@ fn gen_one(num: usize, len: usize) -> Vec<Vec<char>> {
     result
 }
 
+fn match_string(mask:String, trial:String) -> bool {
+    if mask.len() != trial.len() { return false; }
 
+    for (m, t) in mask.chars().zip(trial.chars()) {
+        if m == '?' { continue; }
+        if m != t { return false; }
+    }
+    true
+}
 
 fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
     if nums.len() == 0 {
@@ -393,7 +401,7 @@ fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
     }
     let mut result = vec![];
     for i in 0..=(len - min_req) {
-        println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
+        // println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
         let r_len = len - nums[0] - i -1;
         let r_nums = nums[1..].to_vec();
         let mut prefix = vec!['.'; i - 0];
@@ -409,13 +417,21 @@ fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
 
 fn part1(content: &str) {
     let data = parse_raw_data_per_line(content);
+    let mut grant_total = 0;
     data.iter().enumerate().for_each(|(i, (data, nums))| {
         let data = reduce_dot(data);
-        // let data = split_data(&data[..]);
-        // let r_nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
-        // let r = loop_data_matching(data.clone(), r_nums);
-        println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, 1);
+        let nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+        let options = gen_possibility(nums.clone(), data.len());
+        let mut sum = 0;
+        options.iter().for_each(|x| {
+            if match_string(data.clone(), x.clone()) {
+                sum+=1;
+            }
+        });
+        println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, sum);
+        grant_total += sum;
     });
+    println!("grant_total: {}", grant_total)
 }
 
 fn part2(content: &str) {
@@ -423,10 +439,10 @@ fn part2(content: &str) {
     let data = parse_raw_data_per_line(content);
     // data.iter().for_each(|(data, nums)| {
     //     let data = reduce_dot(data);
-    //     // println!("data: {}, nums: {:?}", data, nums);
+    //     println!("data: {}, nums: {:?}", data, nums);
     // });
-    let p = gen_possibility(vec![1,2],6);
-    println!("p: {:?}", p);
+    // let p = gen_possibility(vec![1,2],6);
+    // println!("p: {:?}", p);
     // let p = gen_possibility(vec![1,3],5);
     // println!("p: {:?}", p);
     // let p = gen_possibility(vec![1,1,1],5);
@@ -439,11 +455,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_gen_one(){
-        assert_eq!(gen_one(2, 2), vec![
-            vec!['#', '#'],
-        ]);
+    fn test_match_string() {
+        assert!(!match_string("????".to_string(), "###".to_string()));
+        assert!(!match_string("???".to_string(), "####".to_string()));
+        assert!(!match_string("??.".to_string(), "###".to_string()));
+        assert!(match_string(".?.".to_string(), ".#.".to_string()));
+        assert!(match_string("#?#".to_string(), "#.#".to_string()));
     }
+
     #[test]
     fn test_single_piece() {
         // #號數量 == num
