@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
     println!("---------- part1 ----------");
     // part 1
@@ -18,6 +18,8 @@ fn main() {
     // part 2
     part2(&contents[..]);
     // 7158 -> not the right answer
+    // 21481 -> not the right answer
+    // 34536
 }
 
 fn parse_data(content: &str) -> HashMap::<usize, Vec<(usize, usize, usize)>> {
@@ -121,7 +123,7 @@ fn calculate_line_left(data: Vec<isize>) -> isize {
     for i in 1..data.len() {
         // result[i] = (result[i] as isize - i as isize).max(0) as usize;
         // if result[i] != 0 { result[i] = i as isize - result[i] }
-        if result[i] == max { return  i as isize}
+        if result[i] == max { return i as isize; }
     }
     // println!("{:?}", result);
     0
@@ -149,7 +151,7 @@ fn cal_exp_for_row(data: &Vec<isize>) -> usize {
     let len = data.len();
     for i in 1..len {
         let expected = (len - i).min(i);
-        if data[i] == expected as isize { return i }
+        if data[i] == expected as isize { return i; }
     }
     0
 }
@@ -194,21 +196,21 @@ fn part1(content: &str) {
         // // let c = col.iter().min().unwrap().clone();
         // (r, c)
     }).collect::<Vec<_>>();
-    println!("stages: {:?}", stages);
+    // println!("stages: {:?}", stages);
     let mut sum = 0;
     stages.iter().enumerate().for_each(|(i, (r, c))| {
-       // if i % 2 == 0 {
-           sum += r ;
-       // } else {
-           sum += c * 100;
-       // }
+        // if i % 2 == 0 {
+        sum += r;
+        // } else {
+        sum += c * 100;
+        // }
         // println!("stage: {}, r: {}, c: {}", i, r, c);
         // sum += r + c;
     });
     println!("sum: {}", sum);
 }
 
-fn find_r_c (m: &Vec<Vec<bool>>) -> (usize, usize) {
+fn find_r_c(m: &Vec<Vec<bool>>) -> (usize, usize) {
     let rows = m.iter().map(|line| {
         let r = parse_one_line(line.to_vec());
         r
@@ -224,6 +226,24 @@ fn find_r_c (m: &Vec<Vec<bool>>) -> (usize, usize) {
     (r, c)
 }
 
+fn find_inv_rc(m: &Vec<Vec<bool>>) -> (usize, usize) {
+    let rows = m.len();
+    let cols = m[0].len();
+    let mut new_m = vec![vec![false; cols]; rows];
+    for i in 0..rows {
+        for j in 0..cols {
+            new_m[i][j] = m[rows - i - 1][cols - j - 1];
+        }
+    }
+    let data = find_r_c(&new_m);
+    // (rows - data.0 - 1, cols - data.1 - 1)
+    // println!("data: {:?} {} - {}", data, rows, cols);
+    let r = if data.0 == 0 { 0 } else { cols - data.0 };
+    let c = if data.1 == 0 { 0 } else { rows - data.1 };
+    (r, c)
+    // data
+}
+
 fn part2(content: &str) {
     let data = parse_data(content);
     let mut keys = data.keys().collect::<Vec<_>>();
@@ -236,38 +256,60 @@ fn part2(content: &str) {
         let ori = find_r_c(m);
         let tr_m = transport(m.to_vec());
         let mut res = (0, 0);
+        let mut res_2 = (0, 0);
         for i in 0..m.len() {
             for j in 0..m[0].len() {
                 let mut m2 = m.clone();
                 m2[i][j] = !m2[i][j];
                 let d = find_r_c(&m2);
-                if d != (0, 0) { res = d; break }
-                // println!("i: {}, j: {}", i, j);
+                if d != (0, 0) && d != ori {
+                    res = d;
+                    break;
+                }
+                let d = find_inv_rc(&m2);
+                if d != (0, 0) && d != ori {
+                    res_2 = d;
+                    break;
+                }
             }
         }
-        let mut res_tr = (0,0);
+        let mut res_tr = (0, 0);
+        let mut res_tr_2 = (0, 0);
         for i in 0..tr_m.len() {
             for j in 0..tr_m[0].len() {
                 let mut m2 = tr_m.clone();
                 m2[i][j] = !m2[i][j];
                 let d = find_r_c(&m2);
-                if d != (0, 0) { res_tr = (d.1, d.0); break }
+                if d != (0, 0) && d != ori {
+                    res_tr = (d.1, d.0);
+                    break;
+                }
+                let d = find_inv_rc(&m2);
+                if d != (0, 0) && d != ori {
+                    res_tr_2 = (d.1, d.0);
+                    break;
+                }
                 // println!("i: {}, j: {}", i, j);
             }
         }
-        (ori, res, res_tr)
+        (ori, res, res_2, res_tr, res_tr_2)
     }).collect::<Vec<_>>();
-    println!("stages: {:?}", stages);
+    // println!("stages: {:?}", stages);
     let mut sum = 0;
-    stages.iter().enumerate().for_each(|(i, (ori, nor, tr))| {
-        // if ori == nor {
-            if ori.0 != tr.0 { sum += tr.0; }
-            if ori.1 != tr.1 { sum += tr.1 * 100; }
-        // } else {
-            if ori.0 != nor.0 { sum += nor.0; }
-            if ori.1 != nor.1 { sum += nor.1 * 100; }
-        // }
+    stages.iter().enumerate().for_each(|(i, (ori, nor, nor2, tr, tr_2))| {
+        if nor != &(0, 0) && nor != ori {
+            if nor.0 != ori.0 { sum += nor.0; }
+            if nor.1 != ori.1 { sum += nor.1 * 100; }
+        } else if nor2 != &(0, 0) && nor2 != ori {
+            if nor2.0 != ori.0 { sum += nor2.0; }
+            if nor2.1 != ori.1 { sum += nor2.1 * 100; }
+        } else if tr != &(0, 0) && tr != ori {
+            if tr.0 != ori.0 { sum += tr.0; }
+            if tr.1 != ori.1 { sum += tr.1 * 100; }
+        } else if tr_2 != &(0, 0) && tr_2 != ori {
+            if tr_2.0 != ori.0 { sum += tr_2.0; }
+            if tr_2.1 != ori.1 { sum += tr_2.1 * 100; }
+        }
     });
     println!("sum: {}", sum);
-
 }
