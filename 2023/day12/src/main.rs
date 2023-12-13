@@ -120,6 +120,10 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     if nums.len() == 0 { return Some(1); }
     if data.len() < nums[0] + nums[1] + 1 { return None; }
     if data.len() == nums[0] + nums[1] + 1 { return Some(1); }
+    let max = max_sharp_position(data);
+    let (start, end) = sharp_position(data);
+    let max_len_limit = nums.iter().sum::<usize>() + nums.len() - 1;
+    if (max - start +1 ) > max_len_limit { return  None }
 
     let iter = data.as_bytes();
     if iter[0] == '#' as u8 {
@@ -278,17 +282,24 @@ fn split_data(data: &str) -> Vec<String> {
 }
 
 fn parse_chooser(data: &str, nums: Vec<usize>) -> usize {
-    if nums.len() == 0 {return  0}
+    if nums.len() == 0 {return  1}
     if nums.len() == 1 { return parse_single_piece(data, nums[0]).unwrap_or(0); }
     if nums.len() == 2 { return parse_two_in_one_piece(data, nums).unwrap_or(0); }
     if nums.len() > 2 { return parse_n_in_one_piece(data, nums).unwrap_or(0); }
     0
 }
 
+fn min_len_required(nums: Vec<usize>) -> usize {
+    if nums.len() == 0 { return 0 }
+    let sum = nums.iter().sum::<usize>();
+    sum + nums.len() -1
+}
+
 fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
-    if data.len() == 0 { return 0 }
     if nums.len() == 0 { return 1 }
+    if data.len() == 0 { return 0 }
     if data.len() == 1 {
+        if data[0].len() < min_len_required(nums.clone()) { return 0; }
         let r = parse_n_in_one_piece(&data[0][..], nums);
         if r.is_some() { return r.unwrap(); }
         return 0;
@@ -304,14 +315,14 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
         for i  in 0..=nums.len() {
             if nums.len() == 1 { println!("nums: {:?}", nums)}
             let nums_1 = nums[..i].to_vec();
-            let r1 = parse_chooser(&data[0][..], nums_1.to_vec());
             let nums_2 = nums[i..].to_vec();
+            if data[0].len() < min_len_required(nums_1.clone()) { continue; }
+            if data[1].len() < min_len_required(nums_2.clone()) { continue; }
+            let r1 = parse_chooser(&data[0][..], nums_1.to_vec());
             let r2 = parse_chooser(&data[1][..], nums_2.to_vec());
             sum += (r1 * r2);
-            if nums.len() == 1 {
 
-                println!("2i: {}, {:?}  num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, data, nums_1, nums_2, r1, r2);
-            }
+            // println!("2i: {}, {:?}  num_1: {:?}, num_2:{:?}, r1: {}, r2: {}", i, data, nums_1, nums_2, r1, r2);
         }
         return sum;
     }
@@ -438,6 +449,7 @@ mod tests {
         assert_eq!(parse_two_in_one_piece("?????#???????", vec![3, 1]), Some(17));
 
         assert_eq!(parse_two_in_one_piece("?#???#???????", vec![3, 1]), Some(2));
+        assert_eq!(parse_two_in_one_piece("????#?#????#?????", vec![1, 1]), None);
     }
 
     #[test]
@@ -454,6 +466,11 @@ mod tests {
         // .###.#..##. 2
         // ..###.#..## 2
         // ..###.#.##. 1
+        assert_eq!(parse_n_in_one_piece("????#?#????#?????", vec![1, 1, 1, 8]), Some(7));
+        // ????#?#????#?????
+        // ....#.#..######## -> 3
+        // ....#.#.########. -> 3
+        // #.#.#.########... -> 1
     }
 
     #[test]
