@@ -434,7 +434,7 @@ fn part1(content: &str) {
     println!("grant_total: {}", grant_total)
 }
 
-fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, str: &str) -> Vec<String> {
+fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec<String> {
     if nums.len() == 0 {
         let str = vec!['.';len];
         return vec![str.iter().collect::<String>()];
@@ -442,7 +442,7 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, str: &str) -> Vec<
     if nums.len() == 1 { return  gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>()}
     if len == 0 { return vec![]; }
     let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
-    // println!("len: {}, min_req:{}" , len, min_req );
+    println!("len: {}, min_req:{}" , len, min_req );
     if len < min_req { return vec![]; }
     if len == min_req {
         let mut result : Vec<char> = vec![];
@@ -453,23 +453,32 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, str: &str) -> Vec<
         });
         return vec![result.iter().collect::<String>()];
     }
-    // println!("nums: {:?}, len: {}, min_req: {}, str: {}", nums, len, min_req, str);
     let mut result = vec![];
     for i in 0..=(len - min_req) {
         // println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
-        let r_len = len - nums[0] - i -1;
+        println!("i: {}, len: {}, min_req: {}, str {}, nums: {:?}", i, len, min_req, mask, nums);
+        let mut r_len = len - nums[0] - i -1;
         let r_nums = nums[1..].to_vec();
         let mut prefix = vec!['.'; i - 0];
+        if mask.as_bytes()[0] == '.' as u8 {
+            prefix.push('.');
+            r_len -= 1;
+        }
         let mut piece = vec!['#';nums[0]];
         piece.push('.');
-        let now_len = piece.len();
-        let p_data = &str[..now_len];
-        // println!("p_data: {}, piece: {:?}", p_data, piece);
-        if !match_string(p_data, &piece.iter().collect::<String>()[..]) { continue; }
-        let r_data = &str[(now_len)..];
         prefix.append(&mut piece.clone());
+        let now_len = prefix.len();
+        let l_mask = &mask[..now_len];
+        let mut r_mask = &mask[now_len..];
+        let mut l_data = prefix.iter().collect::<String>();
+        // l_data.push_str(&piece.iter().collect::<String>());
+        // println!("piece: {:?}, r_len: {}, r_nums: {:?}, r_data:{:?}, p_str:{:?}", piece, r_len, r_nums, r_data, p_str);
+        println!("l_mask: {}, l_data: {:?}", l_mask, l_data);
+        if !match_string(l_mask, &l_data[..]) { continue; }
+        prefix.append(&mut piece.clone());
+        println!("r_data: {}, r_nums: {:?}", r_mask, r_nums[0]);
         let str = prefix.iter().collect::<String>();
-        let others = gen_possibility_with_compare(r_nums, r_len, r_data);
+        let others = gen_possibility_with_compare(r_nums, r_len, r_mask);
         others.iter().for_each(|x| result.push(str.clone() + x));
     }
     result
@@ -480,22 +489,31 @@ fn part2(content: &str) {
     let data = parse_raw_data_per_line(content);
     let mut grant_total : usize = 0;
     data.iter().enumerate().for_each(|(i, (data, nums))| {
-        print!("{i},");
+        println!("line: {}:", i+1);
         let mut big_data = data.to_string();
+        big_data.remove(0);
+        big_data.remove(big_data.len() - 1);
+        let trimmed = big_data.clone();
         let mut nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
         let mut new_nums = nums.to_vec();
-        for _ in 0..4 {
-            big_data.push('.');
-            big_data.push_str(data);
+        let multiplier = 2;
+        for _ in 0..multiplier {
+            big_data.push('?');
+            big_data.push_str(trimmed.as_str());
             new_nums.append(&mut nums.to_vec())
         }
-        let data = reduce_dot(&big_data[..]);
 
-        println!("data: {:?}, nums: {:?}", data, new_nums);
-        let options = gen_possibility_with_compare(new_nums.clone(), data.len(), &data[..]);
+        println!("big_data: {}", big_data);
+        let mut red_data = reduce_dot(big_data.to_string().as_str());
+        println!("red_data: {}", red_data);
+        // println!("---data: {:?}, nums: {:?}", red_data, nums);
+        // println!("data: {:?}, nums: {:?}", data, new_nums);
+        let options = gen_possibility_with_compare(new_nums.clone(), red_data.len(), &red_data[..]);
         let mut sum = 0;
         options.iter().for_each(|x| {
-            if match_string(&data[..], &x[..]) {
+            println!("x       : {}", x);
+            println!("red_data: {}", red_data);
+            if match_string(&red_data[..], &x[..]) {
                 sum+=1;
             }
         });
