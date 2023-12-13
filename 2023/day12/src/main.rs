@@ -15,6 +15,18 @@ fn main() {
     part2(&contents[..]);
 }
 
+fn count_combinations(n: usize, r: usize) -> usize {
+    if r > n {
+        0
+    } else {
+        (1..=r).fold(1, |acc, val| acc * (n - val + 1) / val)
+    }
+}
+
+fn count_permutations(n: usize, r: usize) -> usize {
+    (n - r + 1..=n).product()
+}
+
 fn parse_raw_data_per_line(content: &str) -> Vec<(String, Vec<i32>)> {
     content.lines().map(|line| {
         let mut line = line.split(" ");
@@ -65,7 +77,7 @@ fn sharp_position(data: &str) -> (usize, usize) {
 
 fn find_first_range(data: &str, num: usize) -> (usize, usize) {
     if data.len() < num { return (0, 0); }
-    if data.chars().all(|x| x == '?') { return (0, data.len()-1); }
+    if data.chars().all(|x| x == '?') { return (0, data.len() - 1); }
     let (start, end) = sharp_position(data);
     let min = end as isize + 1 - num as isize;
     let min = min.max(0) as usize;
@@ -78,6 +90,13 @@ fn find_first_range(data: &str, num: usize) -> (usize, usize) {
 fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
     if data.len() < num { return None; }
     if data.len() == num { return Some(1_usize); }
+    let iter = data.as_bytes();
+
+    if iter.iter().any(|x| *x == ('#' as u8)) {
+        let (start, end) = sharp_position(data);
+        let max = max_sharp_position(data);
+        if 1 + max - start > num { return None; }
+    }
 
     if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == num {
         return Some(1_usize);
@@ -86,8 +105,6 @@ fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
     if data.as_bytes().iter().filter(|x| **x == ('#' as u8)).count() == 0 {
         return Some(data.len() + 1 - num);
     }
-
-    let iter = data.as_bytes();
 
     if iter[0] == '#' as u8 || iter[data.len() - 1] == '#' as u8 {
         return Some(1_usize);
@@ -115,6 +132,17 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
         let remaining = &data[..data.len() - num - 1];
         return parse_single_piece(remaining, nums[0]);
     }
+
+    // ??????? , 2, 2 (7,2,2) -> (5, 1, 1) ??????
+    if iter.iter().all(|x| *x == ('?' as u8)) {
+        let mut len = iter.len();
+        nums.iter().for_each(|x| len -= (x - 1));
+        let n = len - nums.len() + 1;
+        let x = nums.len();
+        if n < x { return None; }
+        return Some(count_combinations(n, x));
+    }
+
     // 012345678
     // ?#??????? , 3 => (0, 3)
     let mut combinations = 0;
@@ -127,16 +155,20 @@ fn parse_two_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
         if r.is_some() { combinations += r.unwrap(); }
     }
 
-    let rev = data.chars().rev().collect::<String>();
-    let (min, max) = find_first_range(&rev[..], nums[1]);
-    for i in min..=(max - nums[1] + 1) {
-        let end = i + nums[1];
-        if iter[end] == '#' as u8 { continue; }
-        let remaining = &rev[(end + 1)..];
-        let r = parse_single_piece(remaining, nums[0]);
-        if r.is_some() { combinations += r.unwrap(); }
+    // 012345678
+    // ????#???? 2, 3 => (0, 3)
+    let (start, end) = sharp_position(data);
+    if start > nums[0] {
+        for i in 0..=(start - nums[0] - 1) {
+            let idx = i + nums[0] + 1;
+            let r = parse_single_piece(&data[idx..], nums[1]);
+            if r.is_some() { combinations += r.unwrap(); }
+        }
+        // let rev = data.chars().rev().collect::<String>();
+        // let r_nums = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
+        // let r = parse_two_in_one_piece(rev.as_str(), r_nums);
+        // if r.is_some() { combinations += r.unwrap(); }
     }
-
 
     Some(combinations)
 }
@@ -147,6 +179,16 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
     if data.len() == min_len { return Some(1); }
 
     let iter = data.as_bytes();
+
+    if iter.iter().all(|x| *x == ('?' as u8)) {
+        let mut len = iter.len();
+        nums.iter().for_each(|x| len -= (x - 1));
+        let n = len - nums.len() + 1;
+        let x = nums.len();
+        if n < x { return None; }
+        return Some(count_combinations(n, x));
+    }
+
     if iter[0] == '#' as u8 {
         let num = nums[0] + 1; // add split dot
         let remaining = &data[num..];
@@ -188,23 +230,38 @@ fn parse_n_in_one_piece(data: &str, nums: Vec<usize>) -> Option<usize> {
         if r.is_some() { combinations += r.unwrap(); }
     }
 
-    if data.chars().all(|x| x == '?') { return Some(combinations); }
+    // if data.chars().all(|x| x == '?') { return Some(combinations); }
 
-    let rev = data.chars().rev().collect::<String>();
-    let rev_nums = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
-    let (min, max) = find_first_range(&rev[..], rev_nums[0]);
-    for i in min..=(max - rev_nums[0] + 1) {
-        let end = i + rev_nums[0];
-        if end >= rev.len() { continue; }
-        if iter[end] == '#' as u8 { continue; }
-        let remaining = &rev[(end + 1)..];
-        let r_nums = rev_nums[1..].to_vec();
-        let r = if r_nums.len() == 1 {
-            parse_single_piece(remaining, r_nums[0])
-        } else {
-            parse_n_in_one_piece(remaining, r_nums)
-        };
-        if r.is_some() { combinations += r.unwrap(); }
+    // let rev = data.chars().rev().collect::<String>();
+    // let rev_nums = nums.iter().rev().map(|x| *x).collect::<Vec<usize>>();
+    // let (min, max) = find_first_range(&rev[..], rev_nums[0]);
+    // for i in min..=(max - rev_nums[0] + 1) {
+    //     let end = i + rev_nums[0];
+    //     if end >= rev.len() { continue; }
+    //     if iter[end] == '#' as u8 { continue; }
+    //     let remaining = &rev[(end + 1)..];
+    //     let r_nums = rev_nums[1..].to_vec();
+    //     let r = if r_nums.len() == 1 {
+    //         parse_single_piece(remaining, r_nums[0])
+    //     } else {
+    //         parse_n_in_one_piece(remaining, r_nums)
+    //     };
+    //     if r.is_some() { combinations += r.unwrap(); }
+    // }
+
+    let (start, end) = sharp_position(data);
+    if start > nums[0] {
+        for i in 0..=(start - nums[0] - 1) {
+            let idx = i + nums[0] + 1;
+            let r_data = &data[idx..];
+            let r_nums = nums[1..].to_vec();
+            let r = if r_nums.len() == 1 {
+                parse_single_piece(r_data, r_nums[0])
+            } else {
+                parse_n_in_one_piece(r_data, r_nums)
+            };
+            if r.is_some() { combinations += r.unwrap(); }
+        }
     }
 
     Some(combinations)
@@ -235,6 +292,7 @@ mod tests {
     fn test_single_piece() {
         // #號數量 == num
         assert_eq!(parse_single_piece("###", 3), Some(1));
+        assert_eq!(parse_single_piece("#??#", 3), None);
         assert_eq!(parse_single_piece("?#?", 3), Some(1));
         assert_eq!(parse_single_piece("?###?", 3), Some(1));
         assert_eq!(parse_single_piece("?###", 3), Some(1));
