@@ -7,11 +7,128 @@ fn main() {
 
     println!("---------- part1 ----------");
     // part 1
-    part1(&contents[..]);
+    // part1(&contents[..]);
 
     println!("---------- part2 ----------");
     // part 2
-    part2(&contents[..]);
+    // part2(&contents[..]);
+    part22(&contents[..]);
+}
+
+fn part22(content: &str) {
+    let data = parse_raw_data_per_line(content);
+    let mut grant_total: usize = 0;
+    data.iter().enumerate().for_each(|(i, (data, nums))| {
+        println!("{i}: --------------");
+        let mut big_data = data.to_string();
+        big_data.remove(0);
+        big_data.remove(big_data.len() - 1);
+        let mut piece = big_data[..].to_string();
+        let mut nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+        let mut new_nums = nums.to_vec();
+        for _ in 0..4 {
+            big_data.push('?');
+            big_data.push_str(piece.as_str());
+            new_nums.append(&mut nums.to_vec())
+        }
+        let data = reduce_dot(&big_data[..]);
+
+        let data_split = data.split(".").collect::<Vec<&str>>();
+        let mut data_pairs = vec![];
+        for i in 1..data_split.len() {
+            let data_l = data_split[..i].to_vec();
+            let data_r = data_split[i..].to_vec();
+            data_pairs.push((data_l.clone(), data_r.clone()));
+            // println!("data_l: {:?}, data_r: {:?}", data_l, data_r);
+        }
+        let mut num_pairs = vec![];
+        for i in 0..new_nums.len() {
+            let num_l = new_nums[..i].to_vec();
+            let num_r = new_nums[i..].to_vec();
+            num_pairs.push((num_l.clone(), num_r.clone()));
+            // println!("num_l: {:?}, num_r: {:?}", num_l, num_r);
+        }
+        num_pairs.push((vec![], new_nums.clone()));
+
+        println!("data: {:?}, nums: {:?}", data_pairs, num_pairs);
+
+        let mut sum = 0;
+
+        for (di, dpair) in data_pairs.iter().enumerate() {
+            for (ni, npair) in num_pairs.iter().enumerate() {
+                let l_count = parse_n_nums_in_n_data(&dpair.0, &npair.0);
+                let r_count = parse_n_nums_in_n_data(&dpair.1, &npair.1);
+                if l_count != 0 || r_count != 0 {
+                    println!("di: {}, ni: {}", di, ni);
+                    println!("dpair: {:?}, \nnpair: {:?}\n count:({}, {})", dpair, npair, l_count, r_count);
+                }
+                sum+= l_count * r_count;
+                // if ni >= 2 { break; }
+            }
+            // if di >= 2 { break; }
+        }
+
+        println!("{i}, ---> {}", sum);
+        grant_total += sum as usize;
+    });
+}
+
+fn parse_n_nums_in_n_data(data_list: &Vec<&str>, nums: &Vec<usize>) -> usize {
+    let mut sum = 0;
+    for i in 1..data_list.len() {
+        for nx in 0..=nums.len() {
+            let (num_l, num_r) = if nx == nums.len() {
+                (vec![], nums[..nx].to_vec())
+            } else {
+                (nums[..nx].to_vec(), nums[nx..].to_vec())
+            };
+            let data_l = data_list[..i].to_vec();
+            let count_l = if data_l.len() == 1 {
+                parse_n_nums_in_one_data(data_l[0], &num_l)
+            } else {
+                parse_n_nums_in_n_data(&data_l, &num_l)
+            };
+            let data_r = data_list[i..].to_vec();
+            let count_r = if data_r.len() == 1 {
+                parse_n_nums_in_one_data(data_r[0], &num_r)
+            } else {
+                parse_n_nums_in_n_data(&data_r, &num_r)
+            };
+            // println!("---------------------------------------------------");
+            // println!("data_l: {:?}, data_r: {:?}  num_l: {:?} num_r: {:?}", data_l, data_r, num_l, num_r);
+            // println!("count_l: {}, count_r: {}", count_l, count_r);
+            sum += count_l * count_r
+        }
+    }
+    sum
+}
+
+fn parse_n_nums_in_one_data(data: &str, nums: &Vec<usize>) -> usize {
+    let min_req = min_len_required(nums.clone());
+    let data_bytes = data.as_bytes();
+    if min_req == 0 {
+        if data_bytes.iter().any(|x| *x == ('#' as u8)) {
+            return 0;
+        }
+        return 1;
+    }
+    if nums.len() == 1 {
+        if data.len() == nums[0] {
+            if data_bytes.iter().any(|x| *x == ('.' as u8)) {
+                return 0;
+            }
+            return 1;
+        }
+    }
+    if data.len() < min_req { return 0; }
+    let possibilities = gen_possibility(nums.clone(), data.len());
+    let mut sum = 0;
+    possibilities.iter().for_each(|x| {
+        if match_string(&data[..], &x[..]) {
+            sum += 1;
+        }
+    });
+    sum
 }
 
 fn count_combinations(n: usize, r: usize) -> usize {
@@ -371,7 +488,7 @@ fn gen_one(num: usize, len: usize) -> Vec<Vec<char>> {
     result
 }
 
-fn match_string(mask:&str, trial:&str) -> bool {
+fn match_string(mask: &str, trial: &str) -> bool {
     if mask.len() != trial.len() { return false; }
 
     for (m, t) in mask.chars().zip(trial.chars()) {
@@ -383,18 +500,18 @@ fn match_string(mask:&str, trial:&str) -> bool {
 
 fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
     if nums.len() == 0 {
-        let str = vec!['.';len];
+        let str = vec!['.'; len];
         return vec![str.iter().collect::<String>()];
     }
-    if nums.len() == 1 { return  gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>()}
+    if nums.len() == 1 { return gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>(); }
     if len == 0 { return vec![]; }
     let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
     if len < min_req { return vec![]; }
     if len == min_req {
-        let mut result : Vec<char> = vec![];
-        nums.iter().enumerate().for_each(|(idx,n)|{
+        let mut result: Vec<char> = vec![];
+        nums.iter().enumerate().for_each(|(idx, n)| {
             if idx > 0 { result.push('.'); }
-            let mut piece = vec!['#';*n];
+            let mut piece = vec!['#'; *n];
             result.append(&mut piece)
         });
         return vec![result.iter().collect::<String>()];
@@ -402,10 +519,10 @@ fn gen_possibility(nums: Vec<usize>, len: usize) -> Vec<String> {
     let mut result = vec![];
     for i in 0..=(len - min_req) {
         // println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
-        let r_len = len - nums[0] - i -1;
+        let r_len = len - nums[0] - i - 1;
         let r_nums = nums[1..].to_vec();
         let mut prefix = vec!['.'; i - 0];
-        let mut piece = vec!['#';nums[0]];
+        let mut piece = vec!['#'; nums[0]];
         piece.push('.');
         prefix.append(&mut piece.clone());
         let str = prefix.iter().collect::<String>();
@@ -425,7 +542,7 @@ fn part1(content: &str) {
         let mut sum = 0;
         options.iter().for_each(|x| {
             if match_string(&data[..], &x[..]) {
-                sum+=1;
+                sum += 1;
             }
         });
         println!("{i}, data: {:?}, nums: {:?} ---> {}", data, nums, sum);
@@ -436,19 +553,19 @@ fn part1(content: &str) {
 
 fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec<String> {
     if nums.len() == 0 {
-        let str = vec!['.';len];
+        let str = vec!['.'; len];
         return vec![str.iter().collect::<String>()];
     }
-    if nums.len() == 1 { return  gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>()}
+    if nums.len() == 1 { return gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>(); }
     if len == 0 { return vec![]; }
     let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
     println!("len: {}, min_req:{}" , len, min_req );
     if len < min_req { return vec![]; }
     if len == min_req {
-        let mut result : Vec<char> = vec![];
-        nums.iter().enumerate().for_each(|(idx,n)|{
+        let mut result: Vec<char> = vec![];
+        nums.iter().enumerate().for_each(|(idx, n)| {
             if idx > 0 { result.push('.'); }
-            let mut piece = vec!['#';*n];
+            let mut piece = vec!['#'; *n];
             result.append(&mut piece)
         });
         return vec![result.iter().collect::<String>()];
@@ -460,10 +577,6 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec
         let mut r_len = len - nums[0] - i -1;
         let r_nums = nums[1..].to_vec();
         let mut prefix = vec!['.'; i - 0];
-        if mask.as_bytes()[0] == '.' as u8 {
-            prefix.push('.');
-            r_len -= 1;
-        }
         let mut piece = vec!['#';nums[0]];
         piece.push('.');
         prefix.append(&mut piece.clone());
@@ -485,9 +598,8 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec
 }
 
 fn part2(content: &str) {
-
     let data = parse_raw_data_per_line(content);
-    let mut grant_total : usize = 0;
+    let mut grant_total: usize = 0;
     data.iter().enumerate().for_each(|(i, (data, nums))| {
         println!("line: {}:", i+1);
         let mut big_data = data.to_string();
@@ -511,10 +623,8 @@ fn part2(content: &str) {
         let options = gen_possibility_with_compare(new_nums.clone(), red_data.len(), &red_data[..]);
         let mut sum = 0;
         options.iter().for_each(|x| {
-            println!("x       : {}", x);
-            println!("red_data: {}", red_data);
-            if match_string(&red_data[..], &x[..]) {
-                sum+=1;
+            if match_string(&data[..], &x[..]) {
+                sum += 1;
             }
         });
         println!("{i}, ---> {}", sum);
