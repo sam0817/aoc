@@ -62,7 +62,7 @@ fn part22(content: &str) {
                     println!("di: {}, ni: {}", di, ni);
                     println!("dpair: {:?}, \nnpair: {:?}\n count:({}, {})", dpair, npair, l_count, r_count);
                 }
-                sum+= l_count * r_count;
+                sum += l_count * r_count;
                 // if ni >= 2 { break; }
             }
             // if di >= 2 { break; }
@@ -104,7 +104,7 @@ fn parse_n_nums_in_n_data(data_list: &Vec<&str>, nums: &Vec<usize>) -> usize {
 }
 
 fn parse_n_nums_in_one_data(data: &str, nums: &Vec<usize>) -> usize {
-    let min_req = min_len_required(nums.clone());
+    let min_req = min_len_required(&nums);
     let data_bytes = data.as_bytes();
     if min_req == 0 {
         if data_bytes.iter().any(|x| *x == ('#' as u8)) {
@@ -121,28 +121,52 @@ fn parse_n_nums_in_one_data(data: &str, nums: &Vec<usize>) -> usize {
         }
     }
     if data.len() < min_req { return 0; }
-    let possibilities = gen_possibility(nums.clone(), data.len());
     let mut sum = 0;
-    possibilities.iter().for_each(|x| {
-        if match_string(&data[..], &x[..]) {
-            sum += 1;
+    // ???##??, 2,2 len 7
+    for nx in 0..=nums.len() {
+        let (num_l, num_r) = if nx == nums.len() {
+            (vec![], nums[..nx].to_vec())
+        } else {
+            (nums[..nx].to_vec(), nums[nx..].to_vec())
+        };
+        let min_req_l = min_len_required(&num_l);
+        let min_req_r = min_len_required(&num_r);
+        let cut = nums.len() - min_req_l - min_req_r;
+
+        for ni in 0..=cut {
+            let mut count_l = 0;
+            let mut count_r = 0;
+            let data_l = data[ni..(ni + min_req_l)].to_vec();
+            if num_r.len() > 0 {
+                if data.as_bytes()[ni + min_req_l] == ('#' as u8) { continue; }
+                let data_r = data[(ni + min_req_l + 1)..].to_vec();
+                count_r = parse_n_nums_in_one_data(data_r.as_str(), &num_r);
+            }
+            // todo:
         }
-    });
+    }
+    // let possibilities = gen_possibility(nums.clone(), data.len());
+    // possibilities.iter().for_each(|x| {
+    //     if match_string(&data[..], &x[..]) {
+    //         sum += 1;
+    //     }
+    // });
     sum
 }
 
-fn compare_matching(data: &str, nums: &Vec<usize>)-> usize {
+fn compare_matching(data: &str, nums: &Vec<usize>) -> usize {
     let num = nums[0];
-    let r_num =  nums[1..].to_vec();
+    let r_num = nums[1..].to_vec();
     let min_len = min_len_required(&r_num);
+    0
 }
 
-fn compare_matching_one(data: &str, num: usize)-> usize {
+fn compare_matching_one(data: &str, num: usize) -> usize {
     let mut count = 0;
     'p: for pattern_i in 0..=(data.len() - num) {
         for scan_i in 0..data.len() {
             let bytes = data.as_bytes();
-            if  pattern_i <= scan_i && scan_i < pattern_i + num {
+            if pattern_i <= scan_i && scan_i < pattern_i + num {
                 if bytes[scan_i] == ('.' as u8) {
                     continue 'p;
                 }
@@ -152,7 +176,7 @@ fn compare_matching_one(data: &str, num: usize)-> usize {
                 }
             }
         }
-        count+=1;
+        count += 1;
     }
     count
 }
@@ -586,7 +610,7 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec
     if nums.len() == 1 { return gen_one(nums[0], len).iter().map(|x| x.iter().collect::<String>()).collect::<Vec<String>>(); }
     if len == 0 { return vec![]; }
     let min_req = nums.iter().sum::<usize>() + nums.len() - 1;
-    println!("len: {}, min_req:{}" , len, min_req );
+    println!("len: {}, min_req:{}", len, min_req);
     if len < min_req { return vec![]; }
     if len == min_req {
         let mut result: Vec<char> = vec![];
@@ -601,10 +625,10 @@ fn gen_possibility_with_compare(nums: Vec<usize>, len: usize, mask: &str) -> Vec
     for i in 0..=(len - min_req) {
         // println!("i: {}, len: {}, min_req: {}, nums: {:?}", i, len, min_req, nums);
         println!("i: {}, len: {}, min_req: {}, str {}, nums: {:?}", i, len, min_req, mask, nums);
-        let mut r_len = len - nums[0] - i -1;
+        let mut r_len = len - nums[0] - i - 1;
         let r_nums = nums[1..].to_vec();
         let mut prefix = vec!['.'; i - 0];
-        let mut piece = vec!['#';nums[0]];
+        let mut piece = vec!['#'; nums[0]];
         piece.push('.');
         prefix.append(&mut piece.clone());
         let now_len = prefix.len();
@@ -628,7 +652,7 @@ fn part2(content: &str) {
     let data = parse_raw_data_per_line(content);
     let mut grant_total: usize = 0;
     data.iter().enumerate().for_each(|(i, (data, nums))| {
-        println!("line: {}:", i+1);
+        println!("line: {}:", i + 1);
         let mut big_data = data.to_string();
         big_data.remove(0);
         big_data.remove(big_data.len() - 1);
@@ -721,11 +745,10 @@ mod tests {
         assert_eq!(compare_matching_one("???????#????", 4), 4);
         assert_eq!(compare_matching_one("???????#??", 5), 3);
         assert_eq!(compare_matching_one("???????#????????", 5), 5);
-
     }
 
 
-        #[test]
+    #[test]
     fn test_single_piece() {
         // #號數量 == num
         assert_eq!(parse_single_piece("###", 3), Some(1));
