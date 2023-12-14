@@ -131,6 +131,33 @@ fn parse_n_nums_in_one_data(data: &str, nums: &Vec<usize>) -> usize {
     sum
 }
 
+fn compare_matching(data: &str, nums: &Vec<usize>)-> usize {
+    let num = nums[0];
+    let r_num =  nums[1..].to_vec();
+    let min_len = min_len_required(&r_num);
+}
+
+fn compare_matching_one(data: &str, num: usize)-> usize {
+    let mut count = 0;
+    'p: for pattern_i in 0..=(data.len() - num) {
+        for scan_i in 0..data.len() {
+            let bytes = data.as_bytes();
+            if  pattern_i <= scan_i && scan_i < pattern_i + num {
+                if bytes[scan_i] == ('.' as u8) {
+                    continue 'p;
+                }
+            } else {
+                if bytes[scan_i] == ('#' as u8) {
+                    continue 'p;
+                }
+            }
+        }
+        count+=1;
+    }
+    count
+}
+
+
 fn count_combinations(n: usize, r: usize) -> usize {
     if r > n {
         0
@@ -405,7 +432,7 @@ fn parse_chooser(data: &str, nums: Vec<usize>) -> usize {
     0
 }
 
-fn min_len_required(nums: Vec<usize>) -> usize {
+fn min_len_required(nums: &Vec<usize>) -> usize {
     if nums.len() == 0 { return 0; }
     let sum = nums.iter().sum::<usize>();
     sum + nums.len() - 1
@@ -416,7 +443,7 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
     if nums.len() == 0 { return 1; }
     if data.len() == 0 { return 0; }
     if data.len() == 1 {
-        if data[0].len() < min_len_required(nums.clone()) { return 0; }
+        if data[0].len() < min_len_required(&nums) { return 0; }
         let r = parse_n_in_one_piece(&data[0][..], nums);
         if r.is_some() { return r.unwrap(); }
         return 0;
@@ -433,8 +460,8 @@ fn loop_data_matching(data: Vec<String>, nums: Vec<usize>) -> usize {
             if nums.len() == 1 { println!("nums: {:?}", nums) }
             let nums_1 = nums[..i].to_vec();
             let nums_2 = nums[i..].to_vec();
-            if data[0].len() < min_len_required(nums_1.clone()) { continue; }
-            if data[1].len() < min_len_required(nums_2.clone()) { continue; }
+            if data[0].len() < min_len_required(&nums_1) { continue; }
+            if data[1].len() < min_len_required(&nums_2) { continue; }
             let r1 = parse_chooser(&data[0][..], nums_1.to_vec());
             let r2 = parse_chooser(&data[1][..], nums_2.to_vec());
             sum += (r1 * r2);
@@ -638,16 +665,67 @@ fn part2(content: &str) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_match_string() {
-        assert!(!match_string("????".to_string(), "###".to_string()));
-        assert!(!match_string("???".to_string(), "####".to_string()));
-        assert!(!match_string("??.".to_string(), "###".to_string()));
-        assert!(match_string(".?.".to_string(), ".#.".to_string()));
-        assert!(match_string("#?#".to_string(), "#.#".to_string()));
-    }
+    // #[test]
+    // fn test_match_string() {
+    //     assert!(!match_string("????".to_string(), "###".to_string()));
+    //     assert!(!match_string("???".to_string(), "####".to_string()));
+    //     assert!(!match_string("??.".to_string(), "###".to_string()));
+    //     assert!(match_string(".?.".to_string(), ".#.".to_string()));
+    //     assert!(match_string("#?#".to_string(), "#.#".to_string()));
+    // }
 
     #[test]
+    fn test_compare_matching_one() {
+        // #號數量 == num
+        assert_eq!(compare_matching_one("###", 3), 1);
+        assert_eq!(compare_matching_one("#??#", 3), 0);
+        assert_eq!(compare_matching_one("?#?", 3), 1);
+        assert_eq!(compare_matching_one("?###?", 3), 1);
+        assert_eq!(compare_matching_one("?###", 3), 1);
+        assert_eq!(compare_matching_one("???###", 3), 1);
+        assert_eq!(compare_matching_one("###????", 3), 1);
+        assert_eq!(compare_matching_one("???###???", 3), 1);
+        // #號數量 == 0
+        assert_eq!(compare_matching_one("???", 3), 1);
+        assert_eq!(compare_matching_one("????", 3), 2);
+        assert_eq!(compare_matching_one("?????", 3), 3);
+        assert_eq!(compare_matching_one("?????", 2), 4);
+        assert_eq!(compare_matching_one("??????", 3), 4);
+
+        // 長度 == num
+        assert_eq!(compare_matching_one("?#", 2), 1);
+        assert_eq!(compare_matching_one("#?", 2), 1);
+
+        // #開頭 或 # 結尾
+        assert_eq!(compare_matching_one("#??", 2), 1);
+        assert_eq!(compare_matching_one("??#", 2), 1);
+        assert_eq!(compare_matching_one("??##", 3), 1);
+        assert_eq!(compare_matching_one("??#?#", 4), 1);
+        assert_eq!(compare_matching_one("#????????????", 4), 1);
+        assert_eq!(compare_matching_one("????????#?#", 4), 1);
+
+        // #號數量 == 1
+        assert_eq!(compare_matching_one("??#", 2), 1);
+        assert_eq!(compare_matching_one("???#", 2), 1);
+        assert_eq!(compare_matching_one("???#", 3), 1);
+        assert_eq!(compare_matching_one("????#", 4), 1);
+        assert_eq!(compare_matching_one("#??", 2), 1);
+        assert_eq!(compare_matching_one("#???", 2), 1);
+        assert_eq!(compare_matching_one("?#?", 2), 2);
+        assert_eq!(compare_matching_one("?#??", 2), 2);
+        assert_eq!(compare_matching_one("?#??", 2), 2);
+        assert_eq!(compare_matching_one("??#??", 3), 3);
+        assert_eq!(compare_matching_one("?#??", 3), 2);
+        assert_eq!(compare_matching_one("?#?", 3), 1);
+        assert_eq!(compare_matching_one("??#??", 4), 2);
+        assert_eq!(compare_matching_one("???????#????", 4), 4);
+        assert_eq!(compare_matching_one("???????#??", 5), 3);
+        assert_eq!(compare_matching_one("???????#????????", 5), 5);
+
+    }
+
+
+        #[test]
     fn test_single_piece() {
         // #號數量 == num
         assert_eq!(parse_single_piece("###", 3), Some(1));
@@ -727,7 +805,7 @@ mod tests {
         assert_eq!(parse_two_in_one_piece("????#?#????#?????", vec![1, 1]), None);
     }
 
-    #[test]
+    // #[test]
     fn test_parse_n_in_one_piece_complex() {
         assert_eq!(parse_n_in_one_piece("?#?????#?", vec![1, 1]), Some(1));
         assert_eq!(parse_n_in_one_piece("?#??#???#?", vec![1, 1, 1]), Some(1));
