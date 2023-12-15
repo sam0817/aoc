@@ -18,59 +18,96 @@ fn main() {
 fn part22(content: &str) {
     let data = parse_raw_data_per_line(content);
     let mut grant_total: usize = 0;
-    data.iter().enumerate().for_each(|(i, (data, nums))| {
-        println!("{i}: --------------");
-        let mut big_data = data.to_string();
-        big_data.remove(0);
-        big_data.remove(big_data.len() - 1);
-        let mut piece = big_data[..].to_string();
-        let mut nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
-        let mut new_nums = nums.to_vec();
-        for _ in 0..4 {
-            big_data.push('?');
-            big_data.push_str(piece.as_str());
-            new_nums.append(&mut nums.to_vec())
+    for data_i in 0..data.len() {
+        let (pattern, nums) = duplicate_and_reduce(data[data_i].clone(), 3);
+        println!("{data_i}: ------------\n{data:?}");
+        println!("{pattern}: ,{nums:?}");
+        let pattern = pattern.split(".").collect::<Vec<&str>>();
+        let count = cal_possibles(&pattern, &nums);
+        println!("count: {}", count);
+    }
+    // println!("{}", compare_matching_one("???#", 3));
+    // println!("{}", compare_matching_many("???#", vec![2]));
+}
+
+fn cal_possibles(data: &Vec<&str>, nums: &Vec<usize>) -> usize {
+    println!("[P_1]: data: {:?}, nums: {:?}", data, nums);
+    let mut sum = 0;
+    if nums.len() == 0 {
+        if data.iter().any(|x| x.as_bytes().iter().any(|y| *y == ('#' as u8))) {
+            println!("[P_2]: 0");
+            return 0;
         }
-        let data = reduce_dot(&big_data[..]);
+        println!("[P_2]: 1");
+        return 1;
+    }
+    let data_len = data.iter().map(|x| x.len()).sum::<usize>();
+    let nums_sum = nums.iter().sum::<usize>();
+    if nums_sum > data_len {
+        println!("[P_2]: 0");
+        return 0;
+    }
 
-        let data_split = data.split(".").collect::<Vec<&str>>();
-        let mut data_pairs = vec![];
-        for i in 1..data_split.len() {
-            let data_l = data_split[..i].to_vec();
-            let data_r = data_split[i..].to_vec();
-            data_pairs.push((data_l.clone(), data_r.clone()));
-            // println!("data_l: {:?}, data_r: {:?}", data_l, data_r);
-        }
-        let mut num_pairs = vec![];
-        for i in 0..new_nums.len() {
-            let num_l = new_nums[..i].to_vec();
-            let num_r = new_nums[i..].to_vec();
-            num_pairs.push((num_l.clone(), num_r.clone()));
-            // println!("num_l: {:?}, num_r: {:?}", num_l, num_r);
-        }
-        num_pairs.push((vec![], new_nums.clone()));
+    if nums.len() == 1 && data.len() == 1 {
+        let p1 = compare_matching_one(data[0], nums[0]);
+        // let p2 = parse_single_piece(data, nums[0]).unwrap_or(0);
+        // println!("[1] data: {}, nums0: {}, p1: {}",data[0], nums[0], p1);
+        println!("[P_3]: {:?}, {} --> {p1}", data[0], nums[0]);
+        return p1;
+    }
 
-        println!("data: {:?}, nums: {:?}", data_pairs, num_pairs);
+    if data.len() == 1 && nums.len() > 1 {
+        let res = compare_matching_many(data[0], nums);
+        println!("[P_4] data: {:?}, nums: {:?}  res: {}", data, nums, res);
+        return res;
+    }
 
-        let mut sum = 0;
-
-        for (di, dpair) in data_pairs.iter().enumerate() {
-            for (ni, npair) in num_pairs.iter().enumerate() {
-                let l_count = parse_n_nums_in_n_data(&dpair.0, &npair.0);
-                let r_count = parse_n_nums_in_n_data(&dpair.1, &npair.1);
-                if l_count != 0 || r_count != 0 {
-                    println!("di: {}, ni: {}", di, ni);
-                    println!("dpair: {:?}, \nnpair: {:?}\n count:({}, {})", dpair, npair, l_count, r_count);
-                }
-                sum += l_count * r_count;
-                // if ni >= 2 { break; }
+    let mut sum = 0;
+    if data.len() > 1 {
+        // ["###", "???", "???"], => data 0, 1, 3, len:3  for i = 0..3  [0] [0..]
+        for data_cut in 0..data.len() {
+            let pre = &data[..data_cut].to_vec();
+            if pre.iter().any(|x| x.as_bytes().iter().any(|y| *y == ('#' as u8))) {
+                continue;
             }
-            // if di >= 2 { break; }
-        }
+            let data_l = &data[(data_cut)..(data_cut + 1)].to_vec();
+            let data_r = &data[(data_cut + 1)..].to_vec();
 
-        println!("{i}, ---> {}", sum);
-        grant_total += sum as usize;
-    });
+            for num_cut in 0..=nums.len() {
+                let num_l = &nums[..num_cut].to_vec();
+                let num_r = if num_cut == nums.len() {
+                    vec![]
+                } else {
+                    nums[num_cut..].to_vec()
+                };
+                let req = min_len_required(&num_l);
+                if data_l[0].len() < req { continue; }
+                let p1 = cal_possibles(data_l, &num_l);
+                let p2 = cal_possibles(data_r, &num_r);
+                // println!("data_l: {:?}, data_r: {:?}  num_l: {:?} num_r: {:?} -->({}, {})", data_l, data_r, num_l, num_r, p1, p2);
+                sum += p1 * p2;
+            }
+            // println!("[P_5] {:?}  {:?} --> {}", data_l, num_l, p1);
+            // println!("[P_5] {:?}  {:?} --> {}", data_r, num_r, p2);
+        }
+    }
+    println!("[P_9] {:?}, {:?} -->{}", data, nums, sum);
+    sum
+}
+
+fn duplicate_and_reduce(data: (String, Vec<i32>), copies: i32) -> (String, Vec<usize>) {
+    let (mut big_data, nums) = data;
+    big_data.remove(0);
+    big_data.remove(big_data.len() - 1);
+    let mut piece = big_data[..].to_string();
+    let mut nums = nums.iter().map(|x| *x as usize).collect::<Vec<usize>>();
+    let mut new_nums = nums.to_vec();
+    for _ in 0..copies {
+        big_data.push('?');
+        big_data.push_str(piece.as_str());
+        new_nums.append(&mut nums.to_vec())
+    }
+    (reduce_dot(&big_data[..]), new_nums)
 }
 
 fn parse_n_nums_in_n_data(data_list: &Vec<&str>, nums: &Vec<usize>) -> usize {
@@ -136,12 +173,12 @@ fn parse_n_nums_in_one_data(data: &str, nums: &Vec<usize>) -> usize {
         for ni in 0..=cut {
             let mut count_l = 0;
             let mut count_r = 0;
-            let data_l = data[ni..(ni + min_req_l)].to_vec();
-            if num_r.len() > 0 {
-                if data.as_bytes()[ni + min_req_l] == ('#' as u8) { continue; }
-                let data_r = data[(ni + min_req_l + 1)..].to_vec();
-                count_r = parse_n_nums_in_one_data(data_r.as_str(), &num_r);
-            }
+            // let data_l = data[ni..(ni + min_req_l)].to_vec();
+            // if num_r.len() > 0 {
+            //     if data.as_bytes()[ni + min_req_l] == ('#' as u8) { continue; }
+            //     let data_r = data[(ni + min_req_l + 1)..].to_vec();
+            //     count_r = parse_n_nums_in_one_data(data_r.as_str(), &num_r);
+            // }
             // todo:
         }
     }
@@ -163,6 +200,7 @@ fn compare_matching(data: &str, nums: &Vec<usize>) -> usize {
 
 fn compare_matching_one(data: &str, num: usize) -> usize {
     let mut count = 0;
+    if data.len() < num { return 0; }
     'p: for pattern_i in 0..=(data.len() - num) {
         for scan_i in 0..data.len() {
             let bytes = data.as_bytes();
@@ -181,6 +219,44 @@ fn compare_matching_one(data: &str, num: usize) -> usize {
     count
 }
 
+fn compare_matching_many(data: &str, nums: &Vec<usize>) -> usize {
+    let num1 = nums[0];
+    if nums.len() == 1 { return compare_matching_one(data, num1); }
+    if nums.len() == 0 {
+        if data.as_bytes().iter().any(|x| *x == ('#' as u8)) {
+            return 0;
+        }
+        return 1;
+    }
+    if &data[num1..=num1] == "#" {
+        // println!("[P1]: {:?}, {} --> 0", data, nums[0]);
+        return 0;
+    }
+    // let num_l = &nums[..1].to_vec();
+    let num_r = &nums[1..].to_vec();
+    let req_r = min_len_required(num_r);
+    // '????? 2
+    let mut sum = 0;
+    for cut in 0..(data.len() - req_r - num1 + 1) {
+        let data_l = &data[cut..(num1 + cut)];
+
+        let data_r = if num1 + cut + 1 >= data.len() {
+            ""
+        } else {
+            &data[(num1 + cut + 1)..]
+        };
+        let p1 = compare_matching_one(data_l, num1);
+        let p2 = compare_matching_many(data_r, num_r);
+        println!("data_l: {:?}, data_r: {:?}  num_l: {:?} num_r: {:?}", data_l, data_r, num1, num_r);
+        sum += p1 * p2;
+    }
+
+    // println!("[P2] L: {:?}, {:?} ---> {}", data_l, num_l, p1);
+    // println!("[P2] R: {:?}, {:?} ---> {}", data_r, num_r, p2);
+    // println!("data_l: {}, data_r: {}, num_r: {:?}", data_l, data_r, num_r);
+    // return p1 * p2;
+    sum
+}
 
 fn count_combinations(n: usize, r: usize) -> usize {
     if r > n {
@@ -255,7 +331,7 @@ fn find_first_range(data: &str, num: usize) -> (usize, usize) {
 
 /// one string for one number only
 fn parse_single_piece(data: &str, num: usize) -> Option<usize> {
-    if data.len() < num { return None; }
+    if data.len() < num { return Some(1); }
     if data.len() == num { return Some(1_usize); }
     let iter = data.as_bytes();
 
