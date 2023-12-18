@@ -1,9 +1,10 @@
+use std::cmp::min;
 use std::collections::HashMap;
 use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+        let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -37,9 +38,9 @@ fn part1(content: &str) {
     let data = parse_data(content);
     let mut map: Vec<Point> = Vec::new();
     let mut start = Point { r: 0, c: 0 };
-    let mut fill = HashMap::<Point,i32>::new();
+    let mut fill = HashMap::<Point, i32>::new();
 
-    for step in data {
+    for step in &data {
         match step.dir {
             Direction::Up => {
                 for _ in 0..step.steps {
@@ -68,6 +69,7 @@ fn part1(content: &str) {
         }
     }
 
+    let mut plot = Vec::<char>::new();
     let min_r = map.iter().min_by_key(|p| p.r).unwrap().r;
     let max_r = map.iter().max_by_key(|p| p.r).unwrap().r;
     let min_c = map.iter().min_by_key(|p| p.c).unwrap().c;
@@ -97,13 +99,16 @@ fn part1(content: &str) {
                 is_inner = !is_inner;
             }
             if is_line {
-                fill.insert(Point { r, c }, 1);
+                // fill.insert(Point { r, c }, 1);
+                plot.push('#');
                 // print!("#");
             } else if is_inner {
-                fill.insert(Point { r, c }, 2);
+                // fill.insert(Point { r, c }, 2);
+                plot.push('O');
                 // print!("O");
             } else {
-                fill.insert(Point { r, c }, 0);
+                // fill.insert(Point { r, c }, 0);
+                plot.push('.');
                 // print!(".");
             }
             last = (r, c);
@@ -113,9 +118,17 @@ fn part1(content: &str) {
         // println!()
     }
     // println!("data: {:?}", data);
-    // println!("data: {:?}", map);
-    let count = fill.iter().filter(|(_, v)| **v !=0 ).count();
-    println!("count: {:?}", count);
+    println!("data: {:?}", map);
+    let count = fill.iter().filter(|(_, v)| **v != 0).count();
+    // let max_r = fill.iter().max_by_key(|(k, _)| k.r).unwrap().0.r;
+    // let min_r = fill.iter().min_by_key(|(k, _)| k.r).unwrap().0.r;
+    // let max_c = fill.iter().max_by_key(|(k, _)| k.c).unwrap().0.c;
+    // let min_c = fill.iter().min_by_key(|(k, _)| k.c).unwrap().0.c;
+    println!(" ({},{}) - ({},{})", min_r, min_c, max_r, max_c);
+    println!("count: {:?}", plot.len());
+    println!("count: {:?}", plot.iter().filter(|&c| *c == '#').count());
+    println!("count: {:?}", plot.iter().filter(|&c| *c == 'O').count());
+    println!("count: {:?}", plot.iter().filter(|&c| *c == '.').count());
 }
 
 fn part2(content: &str) {}
