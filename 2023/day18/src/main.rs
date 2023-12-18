@@ -1,10 +1,10 @@
 use std::cmp::min;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs;
 
 fn main() {
     // let contents = fs::read_to_string("input")
-        let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -38,7 +38,11 @@ fn part1(content: &str) {
     let data = parse_data(content);
     let mut map: Vec<Point> = Vec::new();
     let mut start = Point { r: 0, c: 0 };
+    let mut line = VecDeque::<Point>::new();
     let mut fill = HashMap::<Point, i32>::new();
+    let mut neighbor = HashMap::<Point, Vec<Point>>::new();
+
+    line.push_back(start.clone());
 
     for step in &data {
         match step.dir {
@@ -67,6 +71,14 @@ fn part1(content: &str) {
                 }
             }
         }
+        line.push_back(start.clone());
+        if line.len() > 3 {
+            line.pop_front();
+        }
+
+        if line.len() == 3 {
+            neighbor.insert(line[1], vec![line[0], line[2]]);
+        }
     }
 
     let mut plot = Vec::<char>::new();
@@ -84,10 +96,11 @@ fn part1(content: &str) {
         let mut is_inner = false;
         for c in min_c..=max_c {
             is_edge = map.iter().any(|p| p.r == r && p.c == c);
-
+            let nei = neighbor.get(&Point { r, c }).unwrap();
+            let cont = nei.iter().any(|p| p.c == last.1 && p.r == last.0);
             // print!("{}/{} ", r, c);
             // print!("{}/{} ", is_edge, is_last_edge);
-            if is_edge && !is_last_edge {
+            if is_edge && !cont {
                 is_line = !is_line;
             }
             if !is_edge && is_last_edge {
