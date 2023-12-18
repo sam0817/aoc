@@ -85,11 +85,43 @@ fn part1(content: &str) {
         });
     });
 
+    let n = do_a_round();
     for x in whole_map {
         print!("{:?}: ", x.0);
         x.1.iter().for_each(|p| print!("{}, ", p));
         println!();
     };
+}
+
+fn do_a_round(next_points: &HashSet<(i32,i32)>, whole_map: &mut HashMap<(i32, i32), Vec<Path>>
+, cost: &Vec<Vec<i32>>
+) -> HashSet<(i32,i32)> {
+    let mut generated_points = HashSet::new();
+    next_points.iter().for_each(|&point| {
+        let from = neighbors(point.0, point.1);
+        let mut result = Vec::new();
+        for &last in from.iter() {
+            if let Some(paths) = whole_map.get(&last){
+                for path in paths {
+                    let mut p = path.clone();
+                    p.add(point.0, point.1, &cost);
+                    if p.current() == point {
+                        result.push(p)
+                    }
+                }
+            };
+        }
+
+        let entry = whole_map.entry(point).or_insert_with(Vec::new);
+        result.iter().for_each(|x| {
+            if !entry.contains(x) {
+                entry.push(x.clone());
+            }
+            generated_points.insert(x.current());
+        });
+    });
+
+    generated_points
 }
 
 
