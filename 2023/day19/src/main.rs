@@ -195,7 +195,7 @@ fn part2(content: &str) {
     // println!("{:?}", end_node);
     // println!("{:?}", end_node[1]);
     let mut sum = 0;
-    end_node.iter().for_each(|p| {
+    &end_node.iter().for_each(|p| {
         let r = path_counting(p, &map);
         if p[p.len() - 1] == "A" {
             sum += r.points()
@@ -203,6 +203,9 @@ fn part2(content: &str) {
         println!("{:?} - {:?}", p[p.len()-1], r.points());
     });
     println!("{:?}", sum);
+    let p1 = path_counting(&end_node[3], &map);
+    println!("{:?} - {:?}", &end_node[3], p1);
+    println!("{:?}", p1.points());
 }
 
 fn path_counting(path: &Vec<String>, map: &BTreeMap<String, WorkFlow>) -> CriteriaSet {
