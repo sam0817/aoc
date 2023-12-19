@@ -21,7 +21,7 @@ fn parse_data(content: &str) -> (BTreeMap<String, WorkFlow>, Vec<HashMap<PartTyp
     let mut parts = Vec::<HashMap<PartType, usize>>::new();
     let mut flow_finished = false;
     content.lines().for_each(|line| {
-        if (line.len() == 0) {
+        if line.len() == 0 {
             flow_finished = true;
             return;
         }
@@ -191,8 +191,31 @@ fn part2(content: &str) {
             .cloned()
             .collect::<Vec<Vec<String>>>();
     }
-    println!("{:?}", path);
-    println!("{:?}", end_node);
+    // println!("{:?}", path);
+    // println!("{:?}", end_node);
+    // println!("{:?}", end_node[1]);
+    let mut sum = 0;
+    end_node.iter().for_each(|p| {
+        let r = path_counting(p, &map);
+        if p[p.len() - 1] == "A" {
+            sum += r.points()
+        }
+        println!("{:?} - {:?}", p[p.len()-1], r.points());
+    });
+    println!("{:?}", sum);
+}
+
+fn path_counting(path: &Vec<String>, map: &BTreeMap<String, WorkFlow>) -> CriteriaSet {
+    let mut result = CriteriaSet::new();
+    for i in 1..path.len() {
+        let entry = map.get(&path[i - 1]).unwrap();
+        let r = entry.get_criteria_for_dest();
+        // println!("{:?} - {:?}", &path[i - 1], entry);
+        // println!("{:?} - {:?}", &path[0], r);
+        let (_, set) = r.iter().find(|(dest, _)| *dest == path[i]).unwrap();
+        result = result.combine(set);
+    }
+    result
 }
 
 fn path_finding(node: &Vec<Vec<String>>, map: &BTreeMap<String, WorkFlow>) -> Vec<Vec<String>> {
@@ -225,6 +248,13 @@ struct Criteria {
 }
 
 impl Criteria {
+    fn new(item: PartType) -> Self {
+        Criteria {
+            item,
+            max: 4000,
+            min: 1,
+        }
+    }
     fn up(item: PartType, min: usize) -> Self {
         Criteria {
             item,
@@ -239,5 +269,97 @@ impl Criteria {
             min: 1,
         }
     }
+    fn combine(&self, other: &Self) -> Self {
+        Criteria {
+            item: self.item,
+            max: self.max.min(other.max),
+            min: self.min.max(other.min),
+        }
+    }
 }
+
+impl WorkFlow {
+    fn get_criteria_for_dest(&self) -> Vec<(String, CriteriaSet)> {
+        let mut result = Vec::<(String, CriteriaSet)>::new();
+        let mut result_counter = CriteriaSet::new();
+        self.criteria.iter().for_each(|(pt, comp, count, next)| {
+            let (self_cri, counter) = match comp {
+                CompareType::Less => {
+                    (Criteria::down(*pt, *count - 1), Criteria::up(*pt, *count))
+                }
+                CompareType::Greater => {
+                    (Criteria::up(*pt, *count + 1), Criteria::down(*pt, *count))
+                }
+            };
+            let mut final_cri = result_counter.clone();
+            final_cri.add(self_cri);
+            result.push((next.to_string(), final_cri));
+            result_counter.add(counter);
+        });
+        result.push((self.else_next.to_string(), result_counter));
+
+        result
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CriteriaSet {
+    criteria: HashMap<PartType, Criteria>,
+}
+
+impl CriteriaSet {
+    fn new() -> CriteriaSet {
+        let mut criteria = HashMap::new();
+        criteria.insert(PartType::X, Criteria::new(PartType::X));
+        criteria.insert(PartType::A, Criteria::new(PartType::A));
+        criteria.insert(PartType::S, Criteria::new(PartType::S));
+        criteria.insert(PartType::M, Criteria::new(PartType::M));
+        CriteriaSet {
+            criteria
+        }
+    }
+
+    fn add(&mut self, criteria: Criteria) {
+        let item = criteria.item;
+        let old = self.criteria.get(&item).unwrap();
+        let new = old.combine(&criteria);
+        self.criteria.insert(item, new);
+    }
+
+    fn combine(&self, other: &CriteriaSet) -> CriteriaSet {
+        let mut result = CriteriaSet::new();
+        self.criteria.iter().for_each(|(k, v)| {
+            let other_v = other.criteria.get(k).unwrap();
+            let new = v.combine(other_v);
+            result.criteria.insert(*k, new);
+        });
+        result
+    }
+
+    fn points(&self) -> usize {
+        let mut result = 1;
+        self.criteria.iter().for_each(|(_, v)| {
+            if v.max < v.min {
+                result = 0;
+            } else {
+                result *= v.max - v.min + 1;
+            }
+        });
+        result
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
