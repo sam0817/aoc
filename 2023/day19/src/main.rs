@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -11,7 +11,7 @@ fn main() {
     part1(&contents[..]);
 
     println!("---------- part2 ----------");
-    // part 2
+    // part 2 167409079868000
     part2(&contents[..]);
 }
 
@@ -126,8 +126,50 @@ pub enum PartType {
 
 fn part1(content: &str) {
     let (map, parts) = parse_data(content);
+    let mut sum = HashMap::<PartType, usize>::new();
     println!("{:?}", map);
     println!("{:?}", parts);
+    for part in parts {
+        let t1 = test_parts("in".to_string(), &map, &part);
+        if t1 {
+            part.iter().for_each(|(k, v)| {
+                // println!("{:?}: {}", k, v);
+                let entry = sum.entry(*k).or_insert(0);
+                *entry += v;
+            })
+        }
+    }
+    println!("{:?}", sum);
+    let result = sum.iter().fold(0, |acc, (k, v)| {
+        acc + v
+    });
+    println!("result: {}", result);
 }
+
+fn test_parts(start: String, map: &BTreeMap<String, WorkFlow>, parts: &HashMap<PartType, usize>) -> bool {
+    let flow = map.get(&start).unwrap();
+    let mut test_next = "";
+    for (pt, comp, count, next) in flow.criteria.iter() {
+        let test = match comp {
+            CompareType::Less => {
+                parts.get(pt).unwrap() < count
+            } CompareType::Greater => {
+                parts.get(pt).unwrap() > count
+            }
+        };
+        if test {
+            test_next = next.as_str();
+            break;
+        }
+    }
+    if test_next == "" { test_next = flow.else_next.as_str(); }
+
+    match test_next {
+        "A" => { true }
+        "R" => { false }
+        _ => test_parts(test_next.to_string(), map, parts)
+    }
+}
+
 
 fn part2(content: &str) {}
