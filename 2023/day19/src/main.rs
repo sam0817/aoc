@@ -1,9 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
+use std::fmt::{Display, Formatter};
 use std::fs;
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -116,7 +117,7 @@ pub enum CompareType {
     Greater,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum PartType {
     X,
     M,
@@ -175,37 +176,45 @@ fn test_parts(start: String, map: &BTreeMap<String, WorkFlow>, parts: &HashMap<P
 
 fn part2(content: &str) {
     let (map, _) = parse_data(content);
-    let mut start = vec![vec!["in".to_string()]];
+    let mut start = vec![vec![("in".to_string(), CriteriaSet::new())]];
     let mut path = path_finding(&start, &map);
-    println!("{:?}", path);
-    let mut end_node: Vec<Vec<String>> = Vec::new();
+    // println!("{:?}", path);
+    let mut end_node: Vec<Vec<(String, CriteriaSet)>> = Vec::new();
     for _ in 0..100 {
         path = path_finding(&path, &map);
         let mut ends = path.iter()
-            .filter(|p| p[p.len() - 1] == "A" || p[p.len() - 1] == "R")
+            .filter(|p| p[p.len() - 1].0 == "A" || p[p.len() - 1].0 == "R")
             .cloned()
-            .collect::<Vec<Vec<String>>>();
+            .collect::<Vec<Vec<(String, CriteriaSet)>>>();
         end_node.append(&mut ends);
         path = path.iter()
-            .filter(|p| p[p.len() - 1] != "A" && p[p.len() - 1] != "R")
+            .filter(|p| p[p.len() - 1].0 != "A" && p[p.len() - 1].0 != "R")
             .cloned()
-            .collect::<Vec<Vec<String>>>();
+            .collect::<Vec<Vec<(String, CriteriaSet)>>>();
     }
-    // println!("{:?}", path);
-    // println!("{:?}", end_node);
-    // println!("{:?}", end_node[1]);
-    let mut sum = 0;
-    &end_node.iter().for_each(|p| {
-        let r = path_counting(p, &map);
-        if p[p.len() - 1] == "A" {
-            sum += r.points()
+    println!("{:?}", end_node.iter().count());
+
+    let mut result = 0;
+    let mut accept = 0;
+    end_node.iter().for_each(|p| {
+        let mut criteria_set = CriteriaSet::new();
+        p.iter().for_each(|(s, c)| {
+            criteria_set = criteria_set.combine(c);
+        });
+        // if p[p.len() - 1].0 == "A" {
+        //     result += criteria_set.points();
+        // }
+        let points =criteria_set.points();
+        let path = p.iter().map(|(s, _)| s).collect::<Vec<&String>>();
+        // println!("PATH: {:?}", path);
+        // println!("CRI: {}", criteria_set);
+        // println!("{:?} - {:?}", p[p.len()-1].0, points);
+        result += points;
+        if p[p.len() - 1].0 == "A" {
+            accept += points;
         }
-        println!("{:?} - {:?}", p[p.len()-1], r.points());
     });
-    println!("{:?}", sum);
-    let p1 = path_counting(&end_node[3], &map);
-    println!("{:?} - {:?}", &end_node[3], p1);
-    println!("{:?}", p1.points());
+    println!("result: {} / accept: {}", result, accept);
 }
 
 fn path_counting(path: &Vec<String>, map: &BTreeMap<String, WorkFlow>) -> CriteriaSet {
@@ -221,19 +230,35 @@ fn path_counting(path: &Vec<String>, map: &BTreeMap<String, WorkFlow>) -> Criter
     result
 }
 
-fn path_finding(node: &Vec<Vec<String>>, map: &BTreeMap<String, WorkFlow>) -> Vec<Vec<String>> {
-    let mut new_node: Vec<Vec<String>> = Vec::new();
+//noinspection ALL
+fn path_finding(node: &Vec<Vec<(String, CriteriaSet)>>, map: &BTreeMap<String, WorkFlow>) -> Vec<Vec<(String, CriteriaSet)>> {
+    let mut new_node: Vec<Vec<(String, CriteriaSet)>> = Vec::new();
+
+
     node.iter().for_each(|old_path| {
         let node = &old_path[old_path.len() - 1];
-        let entry = map.get(node).unwrap();
-        // let mut new_path = Vec::<String>::new();
-        for (_, _, _, next) in entry.criteria.iter() {
+        let mut criteria_set = CriteriaSet::new();
+        let entry = map.get(&node.0).unwrap();
+
+        for (pt, cmp, count, next) in entry.criteria.iter() {
+
+            let (mut self_cri, counter) = match cmp {
+                CompareType::Less => {
+                    (Criteria::down(*pt, *count - 1), Criteria::up(*pt, *count))
+                }
+                CompareType::Greater => {
+                    (Criteria::up(*pt, *count + 1), Criteria::down(*pt, *count))
+                }
+            };
+            let mut n_cri = criteria_set.clone();
+            n_cri.add(self_cri);
             let mut n = old_path.clone();
-            n.push(next.to_string());
-            new_node.push(n)
+            n.push((next.to_string(), n_cri));
+            new_node.push(n);
+            criteria_set.add(counter);
         }
         let mut n = old_path.clone();
-        n.push(entry.else_next.to_string());
+        n.push((entry.else_next.to_string(), criteria_set));
         new_node.push(n)
     });
     new_node
@@ -243,7 +268,7 @@ fn path_finding(node: &Vec<Vec<String>>, map: &BTreeMap<String, WorkFlow>) -> Ve
 
 fn criteria_add() {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 struct Criteria {
     item: PartType,
     max: usize,
@@ -352,8 +377,32 @@ impl CriteriaSet {
     }
 }
 
+impl Display for CriteriaSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut result = String::new();
+        self.criteria.iter().for_each(|(_, v)| {
+            result.push_str(&format!("{}, ", v));
+        });
+        write!(f, "{}", result)
+    }
+}
 
+impl Display for Criteria {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: ({}, {})", self.item, self.min, self.max)
+    }
+}
 
+impl Display for PartType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PartType::X => write!(f, "x"),
+            PartType::M => write!(f, "m"),
+            PartType::A => write!(f, "a"),
+            PartType::S => write!(f, "s"),
+        }
+    }
+}
 
 
 
