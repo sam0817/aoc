@@ -3,7 +3,7 @@ use std::fs;
 
 fn main() {
     let contents = fs::read_to_string("input")
-    // let contents = fs::read_to_string("example")
+        // let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -127,8 +127,8 @@ pub enum PartType {
 fn part1(content: &str) {
     let (map, parts) = parse_data(content);
     let mut sum = HashMap::<PartType, usize>::new();
-    println!("{:?}", map);
-    println!("{:?}", parts);
+    // println!("{:?}", map);
+    // println!("{:?}", parts);
     for part in parts {
         let t1 = test_parts("in".to_string(), &map, &part);
         if t1 {
@@ -153,7 +153,8 @@ fn test_parts(start: String, map: &BTreeMap<String, WorkFlow>, parts: &HashMap<P
         let test = match comp {
             CompareType::Less => {
                 parts.get(pt).unwrap() < count
-            } CompareType::Greater => {
+            }
+            CompareType::Greater => {
                 parts.get(pt).unwrap() > count
             }
         };
@@ -172,4 +173,51 @@ fn test_parts(start: String, map: &BTreeMap<String, WorkFlow>, parts: &HashMap<P
 }
 
 
-fn part2(content: &str) {}
+fn part2(content: &str) {
+    let (map, _) = parse_data(content);
+}
+
+fn path_1(node: String, map: &BTreeMap<String, WorkFlow>) {
+    let entry = map.get(&node).unwrap();
+    let criteria_acc = Vec::<Criteria>::new();
+
+    for (pt, comp, count, next) in entry.criteria.iter() {
+        match comp {
+            CompareType::Less => {
+                // parts.get(pt).unwrap() < count
+            }
+            CompareType::Greater => {
+                // parts.get(pt).unwrap() > count
+            }
+        };
+    }
+
+
+}
+
+fn criteria_add() {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Criteria {
+    item: PartType,
+    max: usize,
+    min: usize,
+}
+
+impl Criteria {
+    fn up(item: PartType, min: usize) -> Self {
+        Criteria {
+            item,
+            max: 4000,
+            min,
+        }
+    }
+    fn down(item: PartType, max: usize) -> Self {
+        Criteria {
+            item,
+            max,
+            min: 1,
+        }
+    }
+}
+
