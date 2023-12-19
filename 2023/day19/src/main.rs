@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
 fn main() {
-    let contents = fs::read_to_string("input")
-        // let contents = fs::read_to_string("example")
+    // let contents = fs::read_to_string("input")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -175,24 +175,44 @@ fn test_parts(start: String, map: &BTreeMap<String, WorkFlow>, parts: &HashMap<P
 
 fn part2(content: &str) {
     let (map, _) = parse_data(content);
+    let mut start = vec![vec!["in".to_string()]];
+    let mut path = path_finding(&start, &map);
+    println!("{:?}", path);
+    let mut end_node: Vec<Vec<String>> = Vec::new();
+    for _ in 0..100 {
+        path = path_finding(&path, &map);
+        let mut ends = path.iter()
+            .filter(|p| p[p.len() - 1] == "A" || p[p.len() - 1] == "R")
+            .cloned()
+            .collect::<Vec<Vec<String>>>();
+        end_node.append(&mut ends);
+        path = path.iter()
+            .filter(|p| p[p.len() - 1] != "A" && p[p.len() - 1] != "R")
+            .cloned()
+            .collect::<Vec<Vec<String>>>();
+    }
+    println!("{:?}", path);
+    println!("{:?}", end_node);
 }
 
-fn path_1(node: String, map: &BTreeMap<String, WorkFlow>) {
-    let entry = map.get(&node).unwrap();
-    let criteria_acc = Vec::<Criteria>::new();
-
-    for (pt, comp, count, next) in entry.criteria.iter() {
-        match comp {
-            CompareType::Less => {
-                // parts.get(pt).unwrap() < count
-            }
-            CompareType::Greater => {
-                // parts.get(pt).unwrap() > count
-            }
-        };
-    }
-
-
+fn path_finding(node: &Vec<Vec<String>>, map: &BTreeMap<String, WorkFlow>) -> Vec<Vec<String>> {
+    let mut new_node: Vec<Vec<String>> = Vec::new();
+    node.iter().for_each(|old_path| {
+        let node = &old_path[old_path.len() - 1];
+        let entry = map.get(node).unwrap();
+        // let mut new_path = Vec::<String>::new();
+        for (_, _, _, next) in entry.criteria.iter() {
+            let mut n = old_path.clone();
+            n.push(next.to_string());
+            new_node.push(n)
+        }
+        let mut n = old_path.clone();
+        n.push(entry.else_next.to_string());
+        new_node.push(n)
+    });
+    new_node
+    // path.push(entry.else_next.to_string());
+    // path
 }
 
 fn criteria_add() {}
