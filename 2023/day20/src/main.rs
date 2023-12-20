@@ -6,8 +6,10 @@ fn main() {
     // let contents = fs::read_to_string("input")
     let contents = fs::read_to_string("example2")
         .expect("Should have been able to read the file");
-
+    /// In the second example, after pushing the button 1000 times, 4250 low pulses and 2750 high pulses are sent.
+    /// Multiplying these together gives 11687500.
     println!("---------- part1 ----------");
+    // 849408534 --> not the right answer, answer is too high
     // part 1
     part1(&contents[..]);
 
@@ -117,30 +119,27 @@ fn parse_data(content: &str) -> Vec<Node> {
     nodes
 }
 
-fn part1(content: &str) {
-    let mut nodes = parse_data(content);
-    // first round
+fn one_round(nodes: &mut Vec<Node>) -> (usize, usize) {
     let broadcast = nodes.iter_mut().find(|n| n.node_type == NodeType::Broadcast).unwrap();
-    // let receivers = broadcast.receivers.clone();
     broadcast.receive(Low, "button".to_string());
-    let first_round = nodes.iter_mut().map(|n| {
-        if n.messages.len() > 0 { n.send() } else { vec![] }
-    }).collect::<Vec<_>>();
-    first_round.iter().for_each(|r| {
-        r.iter().for_each(|(to, pulse, from)| {
-            let node = nodes.iter_mut().find(|n| n.name == *to).unwrap();
-            node.receive(*pulse, from.to_string());
-        })
-    });
+    // let first_round = nodes.iter_mut().map(|n| {
+    //     if n.messages.len() > 0 { n.send() } else { vec![] }
+    // }).collect::<Vec<_>>();
+    // first_round.iter().for_each(|r| {
+    //     r.iter().for_each(|(to, pulse, from)| {
+    //         let node = nodes.iter_mut().find(|n| n.name == *to).unwrap();
+    //         node.receive(*pulse, from.to_string());
+    //     })
+    // });
 
-    println!("nodes: {:?}", nodes);
-    println!("next: {:?}", first_round);
+    // println!("nodes: {:?}", nodes);
+    // println!("next: {:?}", first_round);
     let mut round = nodes.iter_mut().map(|n| {
         if n.messages.len() > 0 { n.send() } else { vec![] }
     }).collect::<Vec<_>>();
 
     loop {
-        println!("next: {:?}", round);
+        // println!("next: {:?}", round);
         round.iter().for_each(|r| {
             r.iter().for_each(|(to, pulse, from)| {
                 let node = nodes.iter_mut().find(|n| n.name == *to);
@@ -165,12 +164,19 @@ fn part1(content: &str) {
         .collect::<Vec<_>>();
     let high = all_pulse.iter().filter(|p| ***p == High).count();
     let low = all_pulse.iter().filter(|p| ***p == Low).count();
+    (low, high)
+}
+
+fn part1(content: &str) {
+    let mut nodes = parse_data(content);
+    let (mut low, mut high) = (0, 0);
+    for _ in 0..1000 {
+        let (l, h) = one_round(&mut nodes);
+        low = l;
+        high = h;
+    }
     println!("-----------final----------");
-    println!("nodes: {:?}", nodes);
-    println!("nodes: {:?}", round);
-    // println!("all pulse: {:?} ", all_pulse);
-    println!("all pulse: {:?} H: {}, L: {}", all_pulse.len(), high, low);
-    // println!("all pulse: {:?}", all_pulse.iter().filter_map(|v| *v).sum::<usize>());
+    println!("all pulse: {:?} H: {}, L: {} --> {}", low + high, high, low, high * low);
 }
 
 fn part2(content: &str) {}
