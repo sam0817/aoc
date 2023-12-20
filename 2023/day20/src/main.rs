@@ -1,15 +1,17 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::fs;
 use crate::Pulse::{High, Low};
 
 fn main() {
-    // let contents = fs::read_to_string("input")
-    let contents = fs::read_to_string("example2")
+    let contents = fs::read_to_string("input")
+    // let contents = fs::read_to_string("example2")
         .expect("Should have been able to read the file");
     /// In the second example, after pushing the button 1000 times, 4250 low pulses and 2750 high pulses are sent.
     /// Multiplying these together gives 11687500.
     println!("---------- part1 ----------");
     // 849408534 --> not the right answer, answer is too high
+    // 849306997 --> not the right answer, answer is too high
     // part 1
     part1(&contents[..]);
 
@@ -81,7 +83,8 @@ impl Node {
                 }
             }
             NodeType::Conjunction(_) => {
-                let last = self.messages_history.values().map(|v| v.last().unwrap()).collect::<Vec<&Pulse>>();
+                let last = self.messages_history.values()
+                    .map(|v| v.last().unwrap_or(&Low)).collect::<Vec<&Pulse>>();
                 return if last.iter().any(|p| p != &&High) {
                     self.receivers.iter().map(|r| (r.clone(), High, self.name.clone())).collect::<Vec<(String, Pulse, String)>>()
                 } else {
@@ -96,6 +99,21 @@ impl Node {
             }
         }
         vec![]
+    }
+
+    fn clear(&mut self) {
+        self.messages.clear();
+        match &mut self.node_type {
+            NodeType::FlipFlop(_) => {
+                self.node_type = NodeType::FlipFlop(false);
+            }
+            NodeType::Conjunction(v) => {
+                self.node_type = NodeType::Conjunction(vec![]);
+            }
+            NodeType::Broadcast => {}
+            NodeType::Final => {}
+        }
+        self.messages_history.iter_mut().for_each(|(_, v)| v.clear());
     }
 }
 
@@ -139,16 +157,18 @@ fn one_round(nodes: &mut Vec<Node>) -> (usize, usize) {
     }).collect::<Vec<_>>();
 
     loop {
-        // println!("next: {:?}", round);
+        // println!("nodes: {:?}", round);
         round.iter().for_each(|r| {
             r.iter().for_each(|(to, pulse, from)| {
+                // print!("{} -> {}, ", from, to);
                 let node = nodes.iter_mut().find(|n| n.name == *to);
                 if let Some(nd) = node {
                     nd.receive(*pulse, from.to_string());
                 } else {
                     nodes.push(Node::new(to.to_string(), NodeType::Final));
                 }
-            })
+            });
+            // println!();
         });
         round = nodes.iter_mut().map(|n| {
             if n.messages.len() > 0 { n.send() } else { vec![] }
@@ -169,14 +189,32 @@ fn one_round(nodes: &mut Vec<Node>) -> (usize, usize) {
 
 fn part1(content: &str) {
     let mut nodes = parse_data(content);
+    one_round(&mut nodes);
+    nodes.iter_mut().for_each(|n| {
+        n.clear();
+    });
+    // println!("nodes: {:?}", nodes);
+
     let (mut low, mut high) = (0, 0);
     for _ in 0..1000 {
         let (l, h) = one_round(&mut nodes);
         low = l;
         high = h;
     }
+    // println!("nodes: {:?}", nodes);
     println!("-----------final----------");
-    println!("all pulse: {:?} H: {}, L: {} --> {}", low + high, high, low, high * low);
+    println!("all pulse: {:?} H: {}, L: {} --> {}", low + high, high, low, high * low );
 }
 
 fn part2(content: &str) {}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let string = "Node: ".to_string() + &self.name
+            + &format!(" type: {:?}", self.node_type)
+            + &format!(" receivers: {:?}", self.receivers)
+            + &format!(" messages: {:?}", self.messages);
+        write!(f, "{}", string)
+
+    }
+}
