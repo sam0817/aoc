@@ -93,37 +93,23 @@ fn part2(contents: &str) {
     let cols = map.keys().map(|k| k.1).max().unwrap();
     let start = map.iter().find(|(k, v)| **v == 'S').unwrap();
     let mut his = HashMap::<(isize, isize), isize>::new();
+    // let mut his_2 = HashSet::<(isize, isize, isize)>::new();
     let mut points = HashSet::<(isize, isize)>::new();
     // his.insert((start.0.0, start.0.1), 0);
     points.insert((start.0.0, start.0.1));
-    let (x0, y0) = start.0.clone();
     println!("{},{}", rows, cols);
-    let max_step = 50;
+    let max_step = 500;
     let remain = (start.0.0 + start.0.1) % 2;
     let mut i = 0;
     loop {
         i += 1;
-        let nexts = step_inf(points, &map, rows, cols, i, &mut his);
-        // println!("p: {:?}", nexts);
-        // println!("h: {:?}", his);
+        let nexts = step_inf(points, &map, rows, cols, i, remain, &mut his);
         points = nexts;
-        //     .filter(|p| {
-        //         let (x, y) = (*p).clone();
-        //         !his.contains_key(&(x, y))
-        //     })
-        //     .map(|p| *p).collect::<HashSet<_>>();
-        // his.retain(|k, v| {
-        //     (k.0 + k.1) % 2 == remain
-        // });
+        if i % 100 == 0 {
+            println!("{} ", i);
+        }
         if i >= (max_step) { break; }
     }
-    let empty = map.values().filter(|v| **v !='#').count();
-    let fill = his.iter().filter(|(k, v)| {
-        let (x, y) = (*k).clone();
-        0 < x && x <= rows && 0 < y && y <= cols
-    }).collect::<Vec<_>>();
-    println!("{:?} {:?}", empty, fill);
-    // println!("{} - {:?}", his.len(), his);
     let result = cal_steps(his, max_step);
     println!("{:?}", result);
 }
@@ -134,9 +120,9 @@ fn cal_steps(his: HashMap<(isize, isize), isize>, step: isize) -> isize {
 }
 
 fn step_inf(points: HashSet<(isize, isize)>,
-            map: &HashMap<(isize, isize), char>,
-            rows: isize, cols: isize, step: isize,
-            his: &mut HashMap<(isize, isize), isize>) -> HashSet<(isize, isize)> {
+    map: &HashMap<(isize, isize), char>,
+    rows: isize, cols: isize, step: isize, remain: isize,
+    his: &mut HashMap<(isize, isize), isize>) -> HashSet<(isize, isize)> {
     let mut result = HashSet::<(isize, isize)>::new();
     for point in points.iter() {
         let p = vec![
@@ -144,7 +130,9 @@ fn step_inf(points: HashSet<(isize, isize)>,
             (point.0 + 1, point.1),
             (point.0, point.1 - 1),
             (point.0, point.1 + 1)];
-
+        let p = p.iter()
+            .filter(|k| !his.contains_key(&(k.0, k.1)))
+            .collect::<Vec<_>>();
         p.iter().for_each(|k| {
             let (mut r, mut c) = (*k).clone();
             while r < 1 { r += rows; }
@@ -165,6 +153,7 @@ fn step_inf(points: HashSet<(isize, isize)>,
             }
         });
     }
+    // his.retain(|&k, v| *v <= step - 3 && (k.0 + k.1) % 2 != remain);
 
     result
 }
