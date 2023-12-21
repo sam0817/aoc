@@ -94,17 +94,17 @@ fn part2(contents: &str) {
     let start = map.iter().find(|(k, v)| **v == 'S').unwrap();
     let mut his = HashMap::<(i32, i32), i32>::new();
     let mut points = HashSet::<(i32, i32)>::new();
+    his.insert((start.0.0, start.0.1), 0);
     points.insert((start.0.0, start.0.1));
-    let max_step = 6;
+    println!("{},{}", rows, cols);
+    let max_step = 50;
     for i in 0..max_step {
         let nexts = step_inf(&points, &map, rows, cols, i + 1, &mut his);
         points = nexts;
+        // println!("{:?}", points)
     }
-    let even = his.iter().filter(|(k, v)| **v % 2 == 0).collect::<Vec<_>>();
-    let odd = his.iter().filter(|(k, v)| **v % 2 == 1).collect::<Vec<_>>();
-    println!("{:?}", even);
-    println!("{:?}", odd);
     // println!("{:?}", );
+    // println!("{} - {:?}",his.len(), his);
     let result = cal_steps(his, max_step);
     println!("{:?}", result);
 }
@@ -119,6 +119,9 @@ fn step_inf(points: &HashSet<(i32, i32)>,
             rows: i32, cols: i32, step: i32,
             his: &mut HashMap<(i32, i32), i32>) -> HashSet<(i32, i32)> {
     let mut result = HashSet::<(i32, i32)>::new();
+    let points = points.iter()
+        .filter(|p| his.contains_key(p))
+        .collect::<Vec<_>>();
     for point in points.iter() {
         let p = vec![
             (point.0 - 1, point.1),
@@ -127,7 +130,7 @@ fn step_inf(points: &HashSet<(i32, i32)>,
             (point.0, point.1 + 1)];
 
         p.iter().for_each(|k| {
-            let (mut r, mut c) = *k;
+            let (mut r, mut c) = (*k).clone();
             while r < 1 { r += rows; }
             while r > rows { r -= rows; }
             while c < 1 { c += cols; }
@@ -136,11 +139,11 @@ fn step_inf(points: &HashSet<(i32, i32)>,
             let next = map.get(&(r, c));
             if let Some(next) = next {
                 if next != &'#' {
-                    let h = his.get(&(r, c));
-                    if h.is_none() {
-                        his.insert((k.0, k.1), step);
-                        result.insert((k.0, k.1));
-                    }
+                    // let h = his.get(&(r, c));
+                    // if h.is_none() {
+                    his.insert((k.0, k.1), step);
+                    result.insert((k.0, k.1));
+                    // }
                 }
             } else {
                 println!("ERR");
