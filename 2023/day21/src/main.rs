@@ -16,7 +16,7 @@ fn main() {
     part2(&contents[..]);
 }
 
-fn parse(contents: &str) -> HashMap<(i32, i32), char> {
+fn parse(contents: &str) -> HashMap<(isize, isize), char> {
     let mut result = HashMap::new();
     let mut rows = 0;
     contents
@@ -32,9 +32,9 @@ fn parse(contents: &str) -> HashMap<(i32, i32), char> {
     result
 }
 
-// fn step_1(points: Vec<(i32,i32)>, map: &HashMap<(i32,i32),char>) ->Vec<(i32,i32)> {
-fn step_1(points: &HashSet<(i32, i32)>, map: &HashMap<(i32, i32), char>) -> HashSet<(i32, i32)> {
-    let mut result = HashSet::<(i32, i32)>::new();
+// fn step_1(points: Vec<(isize,isize)>, map: &HashMap<(isize,isize),char>) ->Vec<(isize,isize)> {
+fn step_1(points: &HashSet<(isize, isize)>, map: &HashMap<(isize, isize), char>) -> HashSet<(isize, isize)> {
+    let mut result = HashSet::<(isize, isize)>::new();
     for point in points.iter() {
         let up = map.get(&(point.0 - 1, point.1));
         if let Some(up) = up {
@@ -69,7 +69,7 @@ fn part1(contents: &str) {
     let mut data = parse(contents);
     let start = data.iter().find(|(k, v)| **v == 'S').unwrap();
 
-    let mut points = HashSet::<(i32, i32)>::new();
+    let mut points = HashSet::<(isize, isize)>::new();
     points.insert((start.0.0, start.0.1));
     for i in 0..64 {
         let nexts = step_1(&points, &data);
@@ -92,36 +92,52 @@ fn part2(contents: &str) {
     let rows = map.keys().map(|k| k.0).max().unwrap();
     let cols = map.keys().map(|k| k.1).max().unwrap();
     let start = map.iter().find(|(k, v)| **v == 'S').unwrap();
-    let mut his = HashMap::<(i32, i32), i32>::new();
-    let mut points = HashSet::<(i32, i32)>::new();
-    his.insert((start.0.0, start.0.1), 0);
+    let mut his = HashMap::<(isize, isize), isize>::new();
+    let mut points = HashSet::<(isize, isize)>::new();
+    // his.insert((start.0.0, start.0.1), 0);
     points.insert((start.0.0, start.0.1));
+    let (x0, y0) = start.0.clone();
     println!("{},{}", rows, cols);
     let max_step = 50;
-    for i in 0..max_step {
-        let nexts = step_inf(&points, &map, rows, cols, i + 1, &mut his);
+    let remain = (start.0.0 + start.0.1) % 2;
+    let mut i = 0;
+    loop {
+        i += 1;
+        let nexts = step_inf(points, &map, rows, cols, i, &mut his);
+        // println!("p: {:?}", nexts);
+        // println!("h: {:?}", his);
         points = nexts;
-        // println!("{:?}", points)
+        //     .filter(|p| {
+        //         let (x, y) = (*p).clone();
+        //         !his.contains_key(&(x, y))
+        //     })
+        //     .map(|p| *p).collect::<HashSet<_>>();
+        // his.retain(|k, v| {
+        //     (k.0 + k.1) % 2 == remain
+        // });
+        if i >= (max_step) { break; }
     }
-    // println!("{:?}", );
-    // println!("{} - {:?}",his.len(), his);
+    let empty = map.values().filter(|v| **v !='#').count();
+    let fill = his.iter().filter(|(k, v)| {
+        let (x, y) = (*k).clone();
+        0 < x && x <= rows && 0 < y && y <= cols
+    }).collect::<Vec<_>>();
+    println!("{:?} {:?}", empty, fill);
+    // println!("{} - {:?}", his.len(), his);
     let result = cal_steps(his, max_step);
     println!("{:?}", result);
 }
 
-fn cal_steps(his: HashMap<(i32, i32), i32>, step: i32) -> i32 {
+fn cal_steps(his: HashMap<(isize, isize), isize>, step: isize) -> isize {
     let remain = step % 2;
-    his.values().filter(|h| **h % 2 == remain && step >= **h).count() as i32
+    his.values().filter(|h| **h % 2 == remain && step >= **h).count() as isize
 }
 
-fn step_inf(points: &HashSet<(i32, i32)>,
-            map: &HashMap<(i32, i32), char>,
-            rows: i32, cols: i32, step: i32,
-            his: &mut HashMap<(i32, i32), i32>) -> HashSet<(i32, i32)> {
-    let mut result = HashSet::<(i32, i32)>::new();
-    let points = points.iter()
-        .filter(|p| his.contains_key(p))
-        .collect::<Vec<_>>();
+fn step_inf(points: HashSet<(isize, isize)>,
+            map: &HashMap<(isize, isize), char>,
+            rows: isize, cols: isize, step: isize,
+            his: &mut HashMap<(isize, isize), isize>) -> HashSet<(isize, isize)> {
+    let mut result = HashSet::<(isize, isize)>::new();
     for point in points.iter() {
         let p = vec![
             (point.0 - 1, point.1),
@@ -139,11 +155,10 @@ fn step_inf(points: &HashSet<(i32, i32)>,
             let next = map.get(&(r, c));
             if let Some(next) = next {
                 if next != &'#' {
-                    // let h = his.get(&(r, c));
-                    // if h.is_none() {
+                    if !his.contains_key(&(k.0, k.1)) {
+                        result.insert((k.0, k.1));
+                    }
                     his.insert((k.0, k.1), step);
-                    result.insert((k.0, k.1));
-                    // }
                 }
             } else {
                 println!("ERR");
@@ -153,3 +168,45 @@ fn step_inf(points: &HashSet<(i32, i32)>,
 
     result
 }
+
+// fn step_inf2(points: &HashSet<(isize, isize)>,
+//              map: &HashMap<(isize, isize), char>,
+//              rows: isize, cols: isize, step: isize,
+//              his: &mut HashMap<(isize, isize), isize>) -> HashSet<(isize, isize)> {
+//     let mut result = HashSet::<(isize, isize)>::new();
+//     println!("step: {}", step);
+//     for point in points.iter() {
+//         let p = vec![
+//             (point.0 - 2, point.1),
+//             (point.0 + 2, point.1),
+//             (point.0 - 1, point.1 - 1),
+//             (point.0 - 1, point.1 + 1),
+//             (point.0 + 1, point.1 - 1),
+//             (point.0 + 1, point.1 + 1),
+//             (point.0, point.1 - 2),
+//             (point.0, point.1 + 2)];
+//
+//         p.iter().for_each(|k| {
+//             let (mut r, mut c) = (*k).clone();
+//             if his.contains_key(&(k.0, k.1)) { return; }
+//             while r < 1 { r += rows; }
+//             while r > rows { r -= rows; }
+//             while c < 1 { c += cols; }
+//             while c > cols { c -= cols; }
+//
+//             let next = map.get(&(r, c));
+//             if let Some(next) = next {
+//                 if next != &'#' {
+//                     if !his.contains_key(&(k.0, k.1)) {
+//                         result.insert((k.0, k.1));
+//                     }
+//                     his.insert((k.0, k.1), step);
+//                 }
+//             } else {
+//                 println!("ERR");
+//             }
+//         });
+//     }
+//
+//     result
+// }
