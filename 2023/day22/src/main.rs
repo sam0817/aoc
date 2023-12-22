@@ -2,7 +2,7 @@ use std::fs;
 
 fn main() {
     // let contents = fs::read_to_string("input")
-        let contents = fs::read_to_string("example")
+    let contents = fs::read_to_string("example")
         .expect("Should have been able to read the file");
 
     println!("---------- part1 ----------");
@@ -39,7 +39,13 @@ impl Cube {
         Cube { points }
     }
     fn down(&mut self) {
+        if self.points.iter().any(|p| p.z == 0) {
+            return;
+        }
         self.points.iter_mut().for_each(|p| p.z -= 1);
+    }
+    fn up(&mut self) {
+        self.points.iter_mut().for_each(|p| p.z += 1);
     }
     fn set_z(&mut self, z: i32) {
         let min_z = self.points.iter().map(|p| p.z).min().unwrap();
@@ -69,21 +75,36 @@ fn check_layer_collision(stack: &Vec<Cube>, cube: &Cube) -> bool {
     for i in 0..stack.len() {
         let c = &stack[i];
         if c.points.iter().any(|p| cube.points.contains(p)) {
-            return  true;
+            return true;
         }
     }
     false
 }
 
-fn part1(content: &str) {
-    let data = parse(content);
+fn check_layer_collision_2(stack: &Vec<&Cube>, cube: &Cube) -> bool {
+    for i in 0..stack.len() {
+        let c = stack[i];
+        if c.points.iter().any(|p| cube.points.contains(p)) {
+            return true;
+        }
+    }
+    false
+}
+
+fn collision_points(stack: &Vec<Cube>, cube: &Cube) -> Vec<Point> {
+    let mut result = vec![];
+    stack.iter().for_each(|c| {
+        c.points.iter().for_each(|p| {
+            if cube.points.contains(p) {
+                result.push(*p);
+            }
+        })
+    });
+    result
+}
+
+fn falling(cubes: &mut Vec<Cube>) -> Vec<Cube> {
     let mut stack: Vec<Cube> = vec![];
-
-    let cubes = data.iter().map(|d| {
-        let (l, r) = *d;
-        Cube::new(Point { x: l.0, y: l.1, z: l.2 }, Point { x: r.0, y: r.1, z: r.2 })
-    }).collect::<Vec<Cube>>();
-
     for i in 0..cubes.len() {
         println!("i: {:?}", i);
         let mut z_max = stack.iter()
@@ -105,11 +126,44 @@ fn part1(content: &str) {
             z_max -= 1;
         }
     }
+    stack
+}
 
-    println!("cubes: {:?}", cubes);
-    // println!("cubes: {:?}", stack);
-    stack.iter().for_each(print_cube)
+fn part1(content: &str) {
+    let data = parse(content);
 
+    let cubes = data.iter().map(|d| {
+        let (l, r) = *d;
+        Cube::new(Point { x: l.0, y: l.1, z: l.2 }, Point { x: r.0, y: r.1, z: r.2 })
+    }).collect::<Vec<Cube>>();
+
+    let stack = falling(&mut cubes.clone());
+
+    stack.iter().for_each(print_cube);
+    let mut sum = stack.len();
+    'a: for remove_i in 0..stack.len() {
+        let other = stack.iter().enumerate()
+            .filter(|(j, _)| *j != remove_i)
+            .map(|(_, c)| c).collect::<Vec<_>>();
+        'b: for test_i in 0..other.len() {
+            println!("remove_i: {:?}, test_i: {:?}", remove_i, test_i);
+            let mut test_cube = other[test_i].clone();
+            let test_cubes  = other.iter().enumerate().filter(|(j, _)| *j != test_i).map(|(_, c)| *c).collect::<Vec<_>>();
+            test_cube.down();
+            println!("test_cube: {:?}", test_cube);
+            if check_layer_collision_2(&test_cubes, &test_cube) {
+                // let points = collision_points(&stack, &test_cube);
+                // println!("points: {:?}", points);
+                continue 'b;
+                // break 'b;
+            } else {
+                sum -= 1;
+                break 'b;
+            }
+        }
+    }
+
+    println!("sum: {:?}", sum);
 }
 
 fn part2(content: &str) {}
