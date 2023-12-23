@@ -248,38 +248,55 @@ fn part2_old(content: &str) {
 
 type Line = (Point, Point, usize);
 
+fn near_by_222(map: &HashMap<Point, char>, point: Point) -> Vec<Point> {
+    let diff = vec![(0, -1), (0, 1), (-1, 0), (1, 0)];
+    diff.iter().map(|(dx, dy)| {
+        (point.0 as i32 + dx, point.1 as i32 + dy)
+    }).filter(|(x, y)| {
+        map.contains_key(&(*x as usize, *y as usize))
+    }).map(|(x, y)| {
+        (x as usize, y as usize)
+    }).collect::<Vec<Point>>()
+}
+
 fn find_lines(map: &HashMap<Point, char>, point: Point) -> Vec<Line> {
     let last_row = map.keys().map(|(x, y)| y).max().unwrap().clone();
     let mut steps = 0;
     let start = point.clone();
-    let mut path = vec![point.clone()];
-    let next = near_by(&map, point, &path);
+    let path = vec![point.clone()];
+    let next = near_by_222(&map, point);
+    // println!("next: {:?}", next);
     let mut lines = vec![];
     let mut paths = next.iter().map(|p| {
         let mut path = vec![point.clone()];
         path.push(*p);
         path
     }).collect::<Vec<Vec<Point>>>();
+    // println!("paths: {:?}", paths);
     loop {
         steps += 1;
         for i in (0..paths.len()).rev() {
             let pth = &mut paths[i];
             let p = pth.last().unwrap();
-            let next_step = near_by(&map, *p, &pth);
+            let next_step = near_by_222(&map, *p);
             if (*p).1 == last_row {
+                // println!("{}: touch last row: {:?}", i, p);
                 lines.push((start.clone(), p.clone(), steps));
                 paths.remove(i);
                 continue;
             }
             if next_step.len() == 0 {
+                // println!("{}: no next step: {:?}, {:?}", i, p, pth);
                 paths.remove(i);
                 continue;
             }
             if next_step.len() > 1 {
+                // println!("{}: next step > 1: {:?}", i, p);
                 lines.push((start.clone(), p.clone(), steps));
                 paths.remove(i);
                 continue;
             }
+            // println!("{}: keep going: {:?}", i, next_step);
             pth.push(next_step[0]);
         }
         if paths.len() == 0 { break; }
@@ -311,8 +328,80 @@ fn convert_to_lines(map: &HashMap<Point, char>) -> HashMap<Point, Vec<Line>> {
     lines_map
 }
 
+fn print_line_map(map: &HashMap<Point, Vec<Line>>) {
+    for (k, v) in map {
+        print!("{:?}: ", k);
+        v.iter().for_each(|(start, end, steps)| {
+            print!("-> {:?} {}, ", end, steps);
+        });
+        // println!();
+    }
+}
+
 fn part2(content: &str) {
     let map = parse(content);
+    let start = map.iter().find(|(k, c)| (**k).1 == 1 && **c == '.').unwrap().0;
     let lines_map = convert_to_lines(&map);
-    println!("lines: {:?}", lines_map);
+    print_map(&map);
+    let mut paths = Vec::<Vec<Point>>::new();
+    paths.push(vec![*start]);
+    let mut i = 0;
+    loop {
+        let mut new_paths = Vec::<Vec<Point>>::new();
+        let mut new_found = false;
+        for path in paths {
+            let last = path.last().unwrap();
+
+            if lines_map.contains_key(last) {
+                let lines = lines_map.get(last).unwrap();
+                // println!("lines: {:?}", lines);
+                if lines.len() == 0 {
+                    new_paths.push(path.clone());
+                    continue;
+                }
+                for line in lines {
+                    new_found = true;
+                    let next = line.1.clone();
+                    // println!("next: {:?}", next);
+                    if path.iter().all(|p| *p != next) {
+                        let mut new_path = path.clone();
+                        new_path.push(next);
+                        new_paths.push(new_path);
+                    // } else {
+                        // new_paths.push(path.clone());
+                    }
+                }
+            } else {
+                new_paths.push(path.clone());
+            }
+        }
+        paths = new_paths;
+        i += 1;
+        println!("i: {:?}", i);
+        // println!("paths: {} {:?}", paths.len(), paths);
+        if i > 200 { break; }
+        if !new_found { break; }
+    }
+    println!("paths: {} {:?}", paths.len(), paths);
+    paths.iter().for_each(|p| {
+        let mut steps = 0;
+        for i in 1..p.len() {
+            let p1 = p[i - 1];
+            let p2 = p[i];
+            let step = lines_map.get(&p1).unwrap()
+                .iter().find(|(_, end, steps)| {
+                *end == p2
+            }).unwrap().2;
+            steps += step;
+            // println!("{:?} -> {:?} step: {:?}", p1, p2, step);
+        }
+        println!("steps: {:?}", steps);
+    });
+
+    // print_line_map(&lines_map);
+    let lines = find_lines(&map, (20, 20));
+    // println!("lines: {:?}", lines);
+
+    let ne = near_by_222(&map, (16, 20));
+    // println!("ne: {:?}", ne);
 }
