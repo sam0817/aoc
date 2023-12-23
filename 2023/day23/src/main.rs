@@ -172,7 +172,7 @@ fn near_by_2(map: &HashMap<Point, char>, point: Point, path: &HashSet<Point>) ->
     result
 }
 
-fn part2(content: &str) {
+fn part2_old(content: &str) {
     let map = parse(content);
     let final_row = map.keys().map(|(x, y)| y).max().unwrap().clone();
     print_map(&map);
@@ -188,7 +188,7 @@ fn part2(content: &str) {
     let mut i = 0;
     println!("paths: {:?}", paths);
     loop {
-        i+=1;
+        i += 1;
         let max_step = paths.keys().max().unwrap().clone();
         let min_step = paths.keys().min().unwrap().clone();
         let mut new_found = false;
@@ -233,16 +233,86 @@ fn part2(content: &str) {
 
 
         if i % 200 == 0 { println!("i: {:?}", i); }
-        if !new_found  { break; }
+        if !new_found { break; }
     }
 
     let mut max = 0;
     paths.iter()
         .filter(|(k, (p, s))| p[p.len() - 1].1 == final_row)
         .for_each(|(k, (p, s))| {
-        println!("path: {:?}", p.len() - 1);
-        max = max.max(p.len() - 1);
-    });
+            println!("path: {:?}", p.len() - 1);
+            max = max.max(p.len() - 1);
+        });
     println!("max: {:?}", max);
+}
 
+type Line = (Point, Point, usize);
+
+fn find_lines(map: &HashMap<Point, char>, point: Point) -> Vec<Line> {
+    let last_row = map.keys().map(|(x, y)| y).max().unwrap().clone();
+    let mut steps = 0;
+    let start = point.clone();
+    let mut path = vec![point.clone()];
+    let next = near_by(&map, point, &path);
+    let mut lines = vec![];
+    let mut paths = next.iter().map(|p| {
+        let mut path = vec![point.clone()];
+        path.push(*p);
+        path
+    }).collect::<Vec<Vec<Point>>>();
+    loop {
+        steps += 1;
+        for i in (0..paths.len()).rev() {
+            let pth = &mut paths[i];
+            let p = pth.last().unwrap();
+            let next_step = near_by(&map, *p, &pth);
+            if (*p).1 == last_row {
+                lines.push((start.clone(), p.clone(), steps));
+                paths.remove(i);
+                continue;
+            }
+            if next_step.len() == 0 {
+                paths.remove(i);
+                continue;
+            }
+            if next_step.len() > 1 {
+                lines.push((start.clone(), p.clone(), steps));
+                paths.remove(i);
+                continue;
+            }
+            pth.push(next_step[0]);
+        }
+        if paths.len() == 0 { break; }
+    }
+    lines
+}
+
+fn convert_to_lines(map: &HashMap<Point, char>) -> HashMap<Point, Vec<Line>> {
+    let mut lines_map = HashMap::<Point, Vec<Line>>::new();
+    let final_row = map.keys().map(|(x, y)| y).max().unwrap().clone();
+    let start = map
+        .iter().find(|(k, c)| (**k).1 == 1 && **c == '.').unwrap().0;
+    let mut points = vec![*start];
+    let mut i = 0;
+    loop {
+        i += 1;
+        let mut new_lines = vec![];
+        for p in points {
+            let lines = find_lines(&map, p);
+            new_lines.extend(lines.clone());
+            lines_map.insert(p, lines);
+        }
+        points = new_lines.iter()
+            .map(|(_, end_p, _)| end_p.clone())
+            .filter(|p| lines_map.get(p).is_none())
+            .collect::<Vec<Point>>();
+        if points.len() == 0 { break; }
+    }
+    lines_map
+}
+
+fn part2(content: &str) {
+    let map = parse(content);
+    let lines_map = convert_to_lines(&map);
+    println!("lines: {:?}", lines_map);
 }
